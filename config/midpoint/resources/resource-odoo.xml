@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Odoo ERP (PostgreSQL via DatabaseTable)
+  Connexion directe à la base de données PostgreSQL d'Odoo pour la gestion des utilisateurs.
+  Utilise le connecteur DatabaseTable avec JDBC PostgreSQL.
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo ERP (PostgreSQL)</name>
+    <description>Connexion directe à la base de données Odoo (res_users) via DatabaseTable</description>
+
+    <!-- Connecteur DatabaseTable (disponible par défaut) -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>org.identityconnectors.databasetable.DatabaseTableConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcdbtable="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-databasetable/org.identityconnectors.databasetable.DatabaseTableConnector">
+        <icfc:configurationProperties>
+            <!-- Configuration JDBC PostgreSQL -->
+            <icfcdbtable:host>odoo-db</icfcdbtable:host>
+            <icfcdbtable:port>5432</icfcdbtable:port>
+            <icfcdbtable:database>odoo</icfcdbtable:database>
+            <icfcdbtable:user>odoo</icfcdbtable:user>
+            <icfcdbtable:password>
+                <t:clearValue>odoo</t:clearValue>
+            </icfcdbtable:password>
+            
+            <!-- Configuration de la table -->
+            <icfcdbtable:table>res_users</icfcdbtable:table>
+            <icfcdbtable:keyColumn>id</icfcdbtable:keyColumn>
+            
+            <!-- Driver JDBC PostgreSQL -->
+            <icfcdbtable:jdbcDriver>org.postgresql.Driver</icfcdbtable:jdbcDriver>
+            <icfcdbtable:jdbcUrlTemplate>jdbc:postgresql://%h:%p/%d</icfcdbtable:jdbcUrlTemplate>
+            
+            <!-- Options -->
+            <icfcdbtable:enableEmptyString>false</icfcdbtable:enableEmptyString>
+            <icfcdbtable:quoting>DOUBLE</icfcdbtable:quoting>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Odoo User</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- Attribut ID -->
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Database ID</displayName>
+                <limitations>
+                    <access>
+                        <read>true</read>
+                        <add>false</add>
+                        <modify>false</modify>
+                    </access>
+                </limitations>
+            </attribute>
+
+            <!-- Mapping: Login -->
+            <attribute>
+                <ref>ri:login</ref>
+                <displayName>Login</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                
+                                if (!firstName || !lastName) {
+                                    return null
+                                }
+                                
+                                return firstName + '.' + lastName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: Active -->
+            <attribute>
+                <ref>ri:active</ref>
+                <displayName>Active</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+
+        </objectType>
+    </schemaHandling>
+
+</resource>

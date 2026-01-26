@@ -1,0 +1,104 @@
+{
+  "name": "Pre-Provision Multi-étapes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pre-provision-multi",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "pre-provision-multi"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialiser le workflow multi-étapes\nconst input = $input.first().json;\n\nconst approvalChain = input.approval_chain || [\n  { level: 'manager', email: 'manager@example.com', required: true },\n  { level: 'dept_head', email: 'dept_head@example.com', required: true },\n  { level: 'app_owner', email: 'app_owner@example.com', required: true }\n];\n\nconst currentStep = input.current_step || 0;\nconst currentApprover = approvalChain[currentStep];\n\nreturn {\n  ...input,\n  approval_chain: approvalChain,\n  current_step: currentStep,\n  total_steps: approvalChain.length,\n  current_approver: currentApprover,\n  approval_status: 'pending'\n};"
+      },
+      "id": "init-workflow",
+      "name": "Initialiser workflow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sidibe.osm@gmail.com",
+        "toEmail": "={{ $json.current_approver.email || 'sidibeousmane2005@gmail.com' }}",
+        "subject": "=[Étape {{ $json.current_step + 1 }}/{{ $json.total_steps }}] Demande d'approbation IAM - {{ $json.user_data.login }}",
+        "emailType": "html",
+        "html": "=<h2>Demande d'approbation de provisioning</h2>\n<p><strong>Étape {{ $json.current_step + 1 }} sur {{ $json.total_steps }}</strong></p>\n<p>Niveau d'approbation: <strong>{{ $json.current_approver.level }}</strong></p>\n\n<h3>Utilisateur concerné</h3>\n<ul>\n<li><strong>Login:</strong> {{ $json.user_data.login }}</li>\n<li><strong>Nom:</strong> {{ $json.user_data.first_name }} {{ $json.user_data.last_name }}</li>\n<li><strong>Email:</strong> {{ $json.user_data.email }}</li>\n<li><strong>Département:</strong> {{ $json.user_data.department }}</li>\n</ul>\n\n<h3>Droits demandés</h3>\n<ul>\n<li><strong>Rôles:</strong> {{ $json.requested_roles.join(', ') }}</li>\n<li><strong>Système cible:</strong> {{ $json.target_system }}</li>\n</ul>\n\n<h3>Justification</h3>\n<p>{{ $json.justification || 'Non spécifiée' }}</p>\n\n<h3>Chaîne d'approbation</h3>\n<ol>\n{{ $json.approval_chain.map((a, i) => `<li>${a.level}: ${i < $json.current_step ? '✅ Approuvé' : (i === $json.current_step ? '⏳ En attente' : '⬜ À venir')}</li>`).join('') }}\n</ol>\n\n<hr>\n<p>Cliquez sur l'un des liens ci-dessous pour répondre:</p>\n<p>\n<a href='{{ $env.WEBHOOK_URL }}/webhook/multi-approval-callback?request_id={{ $json.request_id }}&step={{ $json.current_step }}&decision=approved' style='background-color: green; color: white; padding: 10px 20px; text-decoration: none; margin-right: 10px;'>✅ APPROUVER</a>\n<a href='{{ $env.WEBHOOK_URL }}/webhook/multi-approval-callback?request_id={{ $json.request_id }}&step={{ $json.current_step }}&decision=rejected' style='background-color: red; color: white; padding: 10px 20px; text-decoration: none;'>❌ REJETER</a>\n</p>",
+        "options": {}
+      },
+      "id": "send-approval-email",
+      "name": "Envoyer email approbation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: `Demande envoyée à l'approbateur étape ${$json.current_step + 1}/${$json.total_steps}`, workflow_type: 'multi_step', current_step: $json.current_step, total_steps: $json.total_steps, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-sent",
+      "name": "Réponse envoyée",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Initialiser workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialiser workflow": {
+      "main": [
+        [
+          {
+            "node": "Envoyer email approbation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer email approbation": {
+      "main": [
+        [
+          {
+            "node": "Réponse envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "provisioning", "approval", "multi-step"]
+}
+
+

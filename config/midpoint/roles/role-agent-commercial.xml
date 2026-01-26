@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Role Definition: Agent Commercial (CRM)
+  Rôle RBAC avec condition ABAC basée sur le département
+  
+  Ce rôle est automatiquement assigné aux utilisateurs du département "Commercial"
+  et leur donne accès au CRM via:
+  - Appartenance au groupe LDAP "crm-agents"
+  - Rôle applicatif "AGENT_COMMERCIAL" dans l'intranet
+-->
+<role oid="12345678-d34d-b33f-f00d-987987987988"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Agent Commercial</name>
+    <description>
+        Rôle pour les agents commerciaux avec accès au module CRM.
+        Assigné automatiquement aux membres du département Commercial.
+    </description>
+
+    <!-- Politique d'assignation automatique (autoassignment) basée sur ABAC -->
+    <autoassign>
+        <enabled>true</enabled>
+        <focus>
+            <selector>
+                <type>UserType</type>
+                <filter>
+                    <q:and>
+                        <!-- Condition ABAC: département = Commercial -->
+                        <q:equal>
+                            <q:path>organization</q:path>
+                            <q:value>Commercial</q:value>
+                        </q:equal>
+                        <!-- Uniquement les comptes actifs -->
+                        <q:equal>
+                            <q:path>activation/administrativeStatus</q:path>
+                            <q:value>enabled</q:value>
+                        </q:equal>
+                    </q:and>
+                </filter>
+            </selector>
+        </focus>
+    </autoassign>
+
+    <!-- Construction 1: Provisioning vers LDAP (groupe crm-agents) -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <!-- Association au groupe LDAP crm-agents -->
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/cn</q:path>
+                                    <q:value>crm-agents</q:value>
+                                </q:equal>
+                            </filter>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- Construction 2: Provisioning vers Intranet CSV -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7e" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+
+    <requestable>false</requestable> <!-- Non demandable manuellement car auto-assigné -->
+
+</role>
+

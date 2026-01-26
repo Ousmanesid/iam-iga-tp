@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Rôle MidPoint: Odoo_Finance
+  Utilisateur Finance dans Odoo ERP
+  
+  Ce rôle accorde:
+  - Un compte utilisateur dans Odoo
+  - Accès aux modules comptabilité et finance
+  - Permissions étendues pour les rapports financiers
+-->
+<role oid="a0000001-0000-0000-0000-000000000002"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo_Finance</name>
+    <description>Utilisateur Finance Odoo - accès aux modules comptabilité et finance</description>
+    
+    <displayName>Odoo - Finance</displayName>
+    
+    <requestable>true</requestable>
+    
+    <riskLevel>medium</riskLevel>
+    
+    <!-- Inducement: Compte Odoo avec attributs Finance -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <attribute>
+                <ref>ri:active</ref>
+                <outbound>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+    
+    <!-- Inducement: Compte Home App avec rôle Finance -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+    
+    <!-- Association au groupe LDAP compta-team -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>compta-team</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+</role>

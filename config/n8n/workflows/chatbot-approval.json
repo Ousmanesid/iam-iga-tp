@@ -1,0 +1,171 @@
+{
+  "name": "Chatbot Approval Callback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "chatbot-approval",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "chatbot-approval"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer l'action à exécuter\nconst query = $input.first().json.query || {};\nconst action = query.action || query.action_type;\nconst target = query.target || query.target_user;\nconst item = query.item || query.role_or_permission;\nconst decision = query.decision || 'rejected';\n\nif (!action || !target || !item) {\n  throw new Error('Paramètres manquants: action, target, item');\n}\n\nconst isApproved = decision === 'approved';\n\n// Déterminer l'endpoint Gateway selon l'action\nlet gatewayEndpoint = '';\nlet requestBody = {};\n\nswitch(action) {\n  case 'assign_role':\n    gatewayEndpoint = '/provision/roles/assign';\n    requestBody = {\n      user_login: target,\n      role_code: item,\n      assigned_by: query.requester || 'chatbot-approval',\n      source: 'chatbot'\n    };\n    break;\n    \n  case 'remove_role':\n    gatewayEndpoint = '/provision/roles/revoke';\n    requestBody = {\n      user_login: target,\n      role_code: item\n    };\n    break;\n    \n  case 'assign_permission':\n    gatewayEndpoint = '/provision/permissions/assign';\n    requestBody = {\n      user_login: target,\n      permission_code: item,\n      assigned_by: query.requester || 'chatbot-approval'\n    };\n    break;\n    \n  case 'remove_permission':\n    gatewayEndpoint = '/provision/permissions/revoke';\n    requestBody = {\n      user_login: target,\n      permission_code: item\n    };\n    break;\n    \n  default:\n    throw new Error(`Action non supportée: ${action}`);\n}\n\nreturn {\n  action: action,\n  target_user: target,\n  role_or_permission: item,\n  decision: decision,\n  is_approved: isApproved,\n  gateway_endpoint: gatewayEndpoint,\n  request_body: requestBody,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-action",
+      "name": "Préparer action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-approved",
+              "leftValue": "={{ $json.is_approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-approved",
+      "name": "Approuvé?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000{{ $json.gateway_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "execute-action",
+      "name": "Exécuter action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: green;'>✅ Action approuvée et exécutée</h1><p>L'action a été effectuée avec succès.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-success",
+      "name": "Réponse - Succès",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: red;'>❌ Action rejetée</h1><p>L'action n'a pas été effectuée.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-rejected",
+      "name": "Réponse - Rejeté",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer action": {
+      "main": [
+        [
+          {
+            "node": "Approuvé?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approuvé?": {
+      "main": [
+        [
+          {
+            "node": "Exécuter action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse - Rejeté",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exécuter action": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Succès",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "chatbot", "approval", "callback"]
+}
+

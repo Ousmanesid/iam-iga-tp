@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Role: Home App Commercial
+  Rôle Agent Commercial pour Home App avec auto-assignation ABAC
+  
+  Ce rôle est automatiquement assigné aux employés du département "Commercial"
+  et provisionne les permissions CRM dans Home App.
+-->
+<role oid="00000000-0000-0000-0000-000000000103"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Home App Agent Commercial</name>
+    <description>Rôle Agent Commercial pour Home App - Auto-assigné aux employés du département Commercial</description>
+    
+    <displayName>Agent Commercial (Home App)</displayName>
+    
+    <requestable>true</requestable>
+    <riskLevel>low</riskLevel>
+
+    <!-- Inducement: création du compte dans Home App PostgreSQL avec permissions CRM -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7f" type="ResourceType">
+                <!-- Home App PostgreSQL -->
+            </resourceRef>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <!-- Attribut JSON pour les rôles applicatifs -->
+            <attribute>
+                <ref>ri:attributes</ref>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <value>{"app_roles": ["AGENT_COMMERCIAL", "USER"], "crm_access": true}</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+
+    <!-- Condition ABAC: auto-assignation basée sur le département -->
+    <autoassign>
+        <enabled>true</enabled>
+        <focus>
+            <selector>
+                <type>UserType</type>
+                <filter>
+                    <q:equal>
+                        <q:path>organization</q:path>
+                        <q:value>Commercial</q:value>
+                    </q:equal>
+                </filter>
+            </selector>
+        </focus>
+    </autoassign>
+
+    <!-- Condition de validité du rôle -->
+    <condition>
+        <source>
+            <path>$focus/organization</path>
+        </source>
+        <expression>
+            <script>
+                <code>
+                    // Le rôle n'est valide que si l'utilisateur est dans le département Commercial
+                    return organization != null &amp;&amp; organization.toString().equalsIgnoreCase("Commercial")
+                </code>
+            </script>
+        </expression>
+    </condition>
+
+</role>
+

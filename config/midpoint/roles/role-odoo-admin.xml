@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Rôle MidPoint: Odoo_Admin
+  Administrateur Odoo ERP
+  
+  ⚠️ DROIT CRITIQUE - Nécessite approbation
+  
+  Ce rôle accorde:
+  - Un compte administrateur dans Odoo
+  - Accès complet à tous les modules
+  - Droits de configuration système
+-->
+<role oid="a0000001-0000-0000-0000-000000000003"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo_Admin</name>
+    <description>Administrateur Odoo ERP - DROIT CRITIQUE - accès complet système</description>
+    
+    <displayName>Odoo - Administrateur (Critique)</displayName>
+    
+    <!-- Rôle demandable mais nécessite approbation -->
+    <requestable>true</requestable>
+    
+    <!-- Niveau de risque élevé = droit critique -->
+    <riskLevel>high</riskLevel>
+    
+    <!-- Note: L'approbation pour ce rôle critique devra être configurée via les workflows MidPoint -->
+    
+    <!-- Inducement: Compte Odoo Admin -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <attribute>
+                <ref>ri:active</ref>
+                <outbound>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+    
+    <!-- Association au groupe LDAP it-team -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>it-team</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+</role>

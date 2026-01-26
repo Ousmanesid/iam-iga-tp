@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Home App PostgreSQL
+  Système cible pour le provisioning des comptes utilisateurs vers l'application Home App
+  
+  Ce fichier définit comment MidPoint provisionne les utilisateurs
+  vers la base PostgreSQL de Home App via le connecteur DatabaseTable.
+  
+  La Gateway peut être appelée en parallèle pour les workflows d'approbation.
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7f"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Home App PostgreSQL</name>
+    <description>Application Home App - Base PostgreSQL pour la gestion des utilisateurs et permissions</description>
+
+    <!-- Connecteur DatabaseTable pour PostgreSQL -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>org.identityconnectors.databasetable.DatabaseTableConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcdbtable="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-databasetable/org.identityconnectors.databasetable.DatabaseTableConnector">
+        <icfc:configurationProperties>
+            <!-- Configuration JDBC PostgreSQL -->
+            <icfcdbtable:host>homeapp-db</icfcdbtable:host>
+            <icfcdbtable:port>5432</icfcdbtable:port>
+            <icfcdbtable:database>homeapp</icfcdbtable:database>
+            <icfcdbtable:user>homeapp</icfcdbtable:user>
+            <icfcdbtable:password>
+                <t:clearValue>homeapp123</t:clearValue>
+            </icfcdbtable:password>
+            
+            <!-- Configuration de la table -->
+            <icfcdbtable:table>users</icfcdbtable:table>
+            <icfcdbtable:keyColumn>id</icfcdbtable:keyColumn>
+            
+            <!-- Driver JDBC -->
+            <icfcdbtable:jdbcDriver>org.postgresql.Driver</icfcdbtable:jdbcDriver>
+            <icfcdbtable:jdbcUrlTemplate>jdbc:postgresql://%h:%p/%d</icfcdbtable:jdbcUrlTemplate>
+            
+            <!-- Options supplémentaires -->
+            <icfcdbtable:enableEmptyString>false</icfcdbtable:enableEmptyString>
+            <icfcdbtable:quoting>DOUBLE</icfcdbtable:quoting>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <!-- Schéma: définition des attributs et mappings -->
+    <schemaHandling>
+        <!-- Configuration pour les comptes utilisateurs -->
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Home App User Account</displayName>
+            <default>true</default>
+            
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- Attribut ID (UUID généré par PostgreSQL) -->
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Database ID</displayName>
+                <limitations>
+                    <access>
+                        <read>true</read>
+                        <add>false</add>
+                        <modify>false</modify>
+                    </access>
+                </limitations>
+            </attribute>
+
+            <!-- Attribut login (clé unique) -->
+            <attribute>
+                <ref>ri:login</ref>
+                <displayName>Login</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                
+                                if (!firstName || !lastName) {
+                                    return null
+                                }
+                                
+                                return firstName + '.' + lastName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+                <inbound>
+                    <target>
+                        <path>name</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <!-- Attribut email -->
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut first_name -->
+            <attribute>
+                <ref>ri:first_name</ref>
+                <displayName>First Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut last_name -->
+            <attribute>
+                <ref>ri:last_name</ref>
+                <displayName>Last Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut department -->
+            <attribute>
+                <ref>ri:department</ref>
+                <displayName>Department</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/organization</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut job_title -->
+            <attribute>
+                <ref>ri:job_title</ref>
+                <displayName>Job Title</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/title</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut employee_number -->
+            <attribute>
+                <ref>ri:employee_number</ref>
+                <displayName>Employee Number</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/personalNumber</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut midpoint_oid (référence vers MidPoint) -->
+            <attribute>
+                <ref>ri:midpoint_oid</ref>
+                <displayName>MidPoint OID</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/oid</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Attribut is_active -->
+            <attribute>
+                <ref>ri:is_active</ref>
+                <displayName>Active</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/activation/administrativeStatus</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                
+                                if (administrativeStatus == ActivationStatusType.ENABLED) {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Activation (status synchronisation) -->
+            <activation>
+                <administrativeStatus>
+                    <outbound>
+                        <strength>strong</strength>
+                    </outbound>
+                </administrativeStatus>
+            </activation>
+
+            <!-- Credentials (password) -->
+            <credentials>
+                <password>
+                    <outbound>
+                        <strength>strong</strength>
+                        <expression>
+                            <script>
+                                <code>
+                                    // Hash du mot de passe pour stockage sécurisé
+                                    // Note: en production, utiliser bcrypt ou argon2
+                                    import java.security.MessageDigest
+                                    
+                                    if (input == null) {
+                                        return null
+                                    }
+                                    
+                                    String password = input.getClearValue()
+                                    if (password == null) {
+                                        return null
+                                    }
+                                    
+                                    MessageDigest md = MessageDigest.getInstance("SHA-256")
+                                    byte[] hash = md.digest(password.getBytes("UTF-8"))
+                                    StringBuilder sb = new StringBuilder()
+                                    for (byte b : hash) {
+                                        sb.append(String.format("%02x", b))
+                                    }
+                                    return sb.toString()
+                                </code>
+                            </script>
+                        </expression>
+                    </outbound>
+                </password>
+            </credentials>
+        </objectType>
+    </schemaHandling>
+
+    <!-- Configuration de synchronisation -->
+    <synchronization>
+        <objectSynchronization>
+            <objectClass>ri:AccountObjectClass</objectClass>
+            <kind>account</kind>
+            <intent>default</intent>
+            <enabled>true</enabled>
+            <correlation>
+                <q:equal>
+                    <q:path>c:name</q:path>
+                    <expression>
+                        <path>$account/attributes/ri:login</path>
+                    </expression>
+                </q:equal>
+            </correlation>
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            <reaction>
+                <situation>deleted</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unlinked</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unmatched</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
+
+    <!-- Capabilities du connecteur -->
+    <capabilities xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+        <configured>
+            <cap:create>
+                <cap:enabled>true</cap:enabled>
+            </cap:create>
+            <cap:read>
+                <cap:enabled>true</cap:enabled>
+            </cap:read>
+            <cap:update>
+                <cap:enabled>true</cap:enabled>
+            </cap:update>
+            <cap:delete>
+                <cap:enabled>true</cap:enabled>
+            </cap:delete>
+            <cap:activation>
+                <cap:status>
+                    <cap:attribute>ri:is_active</cap:attribute>
+                    <cap:enableValue>true</cap:enableValue>
+                    <cap:disableValue>false</cap:disableValue>
+                </cap:status>
+            </cap:activation>
+        </configured>
+    </capabilities>
+
+</resource>
+

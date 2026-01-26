@@ -1,0 +1,177 @@
+{
+  "name": "Post-Provision Review",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "post-provision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "post-provision"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-review-required",
+              "leftValue": "={{ $json.requires_review !== false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-review",
+      "name": "Revue requise?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sidibe.osm@gmail.com",
+        "toEmail": "={{ $json.reviewer_email || 'sidibeousmane2005@gmail.com' }}",
+        "subject": "=Revue de provisioning - {{ $json.user_login }}",
+        "emailType": "html",
+        "html": "=<h2>Revue de provisioning</h2>\n<p>Un nouveau compte a été créé et nécessite votre validation.</p>\n\n<h3>Compte créé</h3>\n<ul>\n<li><strong>Login:</strong> {{ $json.user_login }}</li>\n<li><strong>Nom:</strong> {{ $json.user_data.full_name || $json.user_data.first_name + ' ' + $json.user_data.last_name }}</li>\n<li><strong>Email:</strong> {{ $json.user_data.email }}</li>\n<li><strong>Département:</strong> {{ $json.user_data.department }}</li>\n</ul>\n\n<h3>Systèmes provisionnés</h3>\n<ul>\n{{ $json.provisioned_systems.map(s => `<li>${s}</li>`).join('') }}\n</ul>\n\n<h3>Rôles assignés</h3>\n<ul>\n{{ $json.provisioned_roles.map(r => `<li>${r}</li>`).join('') }}\n</ul>\n\n<h3>Date de création</h3>\n<p>{{ $json.timestamp }}</p>\n\n<hr>\n<h3>Validation</h3>\n<p>Si ce compte est légitime, cliquez sur <strong>Valider</strong>.</p>\n<p>Si ce compte ne devrait pas exister, cliquez sur <strong>Rejeter</strong> pour le désactiver.</p>\n<p>\n<a href='http://localhost:5678/webhook/review-callback?request_id={{ $json.request_id }}&approved=true&reviewer={{ $json.reviewer_email }}' style='background-color: green; color: white; padding: 10px 20px; text-decoration: none; margin-right: 10px;'>✅ VALIDER</a>\n<a href='http://localhost:5678/webhook/review-callback?request_id={{ $json.request_id }}&approved=false&reviewer={{ $json.reviewer_email }}' style='background-color: red; color: white; padding: 10px 20px; text-decoration: none;'>❌ REJETER (désactiver le compte)</a>\n</p>",
+        "options": {}
+      },
+      "id": "send-review-email",
+      "name": "Envoyer email de revue",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [690, 200],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Email de revue envoyé', review_requested: true, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-review-sent",
+      "name": "Réponse - Revue envoyée",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Provisioning terminé sans revue', review_requested: false, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-no-review",
+      "name": "Réponse - Pas de revue",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/workflow/callback/review",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, status: 'completed', provisioned_at: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "notify-gateway-complete",
+      "name": "Notifier Gateway (terminé)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Revue requise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revue requise?": {
+      "main": [
+        [
+          {
+            "node": "Envoyer email de revue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notifier Gateway (terminé)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer email de revue": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Revue envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier Gateway (terminé)": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Pas de revue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "provisioning", "review", "post-provision"]
+}
+
+

@@ -1,0 +1,142 @@
+# Bootstrap LDIF pour OpenLDAP
+# Structure de base pour le projet IGA
+# Note: La base dc=example,dc=com est créée automatiquement par OpenLDAP
+
+# Unité organisationnelle pour les utilisateurs
+dn: ou=users,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: users
+description: Utilisateurs de l'entreprise
+
+# Unité organisationnelle pour les groupes
+dn: ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: groups
+description: Groupes de l'entreprise
+
+# Groupe CRM - Agents Commerciaux
+dn: cn=crm-agents,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: crm-agents
+description: Agents commerciaux avec acces au CRM
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe RH - Ressources Humaines
+dn: cn=rh-team,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: rh-team
+description: Equipe Ressources Humaines
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe IT - Informatique
+dn: cn=it-team,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: it-team
+description: Equipe Informatique
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe Comptabilité
+dn: cn=compta-team,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: compta-team
+description: Equipe Comptabilite
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe Marketing
+dn: cn=marketing-team,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: marketing-team
+description: Equipe Marketing
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# =============================================================================
+# GROUPES DEMANDÉS POUR LE TP (Ressource 1)
+# =============================================================================
+
+# Groupe Employee - Tous les employés de l'entreprise
+dn: cn=Employee,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: Employee
+description: Groupe pour tous les employes de l'entreprise
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe Internet - Accès Internet autorisé
+dn: cn=Internet,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: Internet
+description: Acces Internet autorise
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe Printer - Accès aux imprimantes
+dn: cn=Printer,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: Printer
+description: Acces aux imprimantes reseau
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe Public_Share_Folder_SharePoint - Accès au partage SharePoint
+dn: cn=Public_Share_Folder_SharePoint,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: Public_Share_Folder_SharePoint
+description: Acces au dossier partage SharePoint public
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# =============================================================================
+# GROUPES POUR APPLICATION MULTI-BASE (Ressource 4 - futur)
+# =============================================================================
+
+# Groupe AppBiz_CustomGR_User
+dn: cn=AppBiz_CustomGR_User,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: AppBiz_CustomGR_User
+description: Utilisateur standard application metier
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe AppBiz_CustomGR2_Manager
+dn: cn=AppBiz_CustomGR2_Manager,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: AppBiz_CustomGR2_Manager
+description: Manager application metier
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe AppBiz_CustomGR2_Admin
+dn: cn=AppBiz_CustomGR2_Admin,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: AppBiz_CustomGR2_Admin
+description: Administrateur application metier
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Groupe AppBiz_CustomGR2_Audit
+dn: cn=AppBiz_CustomGR2_Audit,ou=groups,dc=example,dc=com
+objectClass: top
+objectClass: groupOfNames
+cn: AppBiz_CustomGR2_Audit
+description: Auditeur application metier
+member: cn=placeholder,ou=users,dc=example,dc=com
+
+# Compte technique pour MidPoint (bind DN)
+dn: cn=midpoint-admin,ou=users,dc=example,dc=com
+objectClass: top
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: simpleSecurityObject
+cn: midpoint-admin
+sn: Admin
+uid: midpoint-admin
+userPassword: {SSHA}midpoint123
+description: Compte technique MidPoint pour synchronisation LDAP
+

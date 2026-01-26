@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Rôle MidPoint: Odoo_User
+  Utilisateur standard Odoo ERP
+  
+  Ce rôle accorde:
+  - Un compte utilisateur dans Odoo (via res_users)
+  - Accès de base à l'ERP
+-->
+<role oid="a0000001-0000-0000-0000-000000000001"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo_User</name>
+    <description>Utilisateur standard Odoo ERP - accès de base à l'ERP</description>
+    
+    <displayName>Odoo - Utilisateur</displayName>
+    
+    <requestable>true</requestable>
+    
+    <riskLevel>low</riskLevel>
+    
+    <!-- Inducement: Compte Odoo (PostgreSQL) -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <!-- L'utilisateur sera actif dans Odoo -->
+            <attribute>
+                <ref>ri:active</ref>
+                <outbound>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+    
+    <!-- Note: Les groupes LDAP de base (Employee, Internet, Printer, SharePoint) -->
+    <!-- sont fournis par le rôle "Employee" qui inclut ce rôle Odoo_User -->
+    <!-- Ce rôle se concentre uniquement sur l'accès Odoo -->
+
+</role>

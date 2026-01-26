@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Role Definition: Employee
+  Rôle de base pour tous les employés de l'entreprise.
+  
+  Ce rôle est automatiquement assigné à tous les nouveaux utilisateurs
+  et leur donne:
+  - Un compte LDAP avec appartenance aux groupes de base
+  - Un compte Odoo utilisateur standard
+  
+  Groupes LDAP attribués:
+  - Employee (tous les employés)
+  - Internet (accès Internet)
+  - Printer (accès imprimantes)
+  - Public_Share_Folder_SharePoint (partage SharePoint)
+-->
+<role oid="00000000-0000-0000-0000-000000000004"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Employee</name>
+    <description>
+        Rôle de base pour tous les employés.
+        Attribue automatiquement les accès de base:
+        - Compte LDAP + groupes (Employee, Internet, Printer, SharePoint)
+        - Compte Odoo utilisateur standard
+    </description>
+    
+    <displayName>Employé - Accès de base</displayName>
+
+    <!-- Ce rôle est assignable manuellement aussi -->
+    <requestable>true</requestable>
+    
+    <riskLevel>low</riskLevel>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 1: Compte LDAP -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 2: Groupe LDAP - Employee -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>Employee</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 3: Groupe LDAP - Internet -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>Internet</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 4: Groupe LDAP - Printer (Imprimantes) -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>Printer</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 5: Groupe LDAP - Public_Share_Folder_SharePoint -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/ri:cn</q:path>
+                                    <q:value>Public_Share_Folder_SharePoint</q:value>
+                                </q:equal>
+                            </filter>
+                            <searchStrategy>onResource</searchStrategy>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- ============================================================ -->
+    <!-- INDUCEMENT 6: Compte Odoo utilisateur de base -->
+    <!-- ============================================================ -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <!-- L'utilisateur sera actif dans Odoo -->
+            <attribute>
+                <ref>ri:active</ref>
+                <outbound>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+
+</role>

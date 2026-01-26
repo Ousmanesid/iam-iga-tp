@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tâche de synchronisation Odoo HR → MidPoint
+  Importe les employés Odoo et déclenche l'auto-assign des rôles.
+  
+  Exécution : toutes les 5 minutes (configurable)
+-->
+<task oid="8a83b1a4-be18-11e6-ae84-7301fdab1d81"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo HR Sync</name>
+    <description>Synchronisation des employés Odoo vers MidPoint avec auto-assign des rôles</description>
+
+    <extension xmlns:mext="http://midpoint.evolveum.com/xml/ns/public/model/extension-3">
+        <mext:kind>account</mext:kind>
+        <mext:intent>default</mext:intent>
+        <mext:objectclass>ri:hr_employee</mext:objectclass>
+    </extension>
+
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" type="UserType"/>
+
+    <executionStatus>runnable</executionStatus>
+
+    <category>Reconciliation</category>
+
+    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/synchronization/task/reconciliation/handler-3</handlerUri>
+
+    <objectRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d80" type="ResourceType"/>
+
+    <recurrence>recurring</recurrence>
+    
+    <schedule>
+        <interval>300</interval> <!-- 5 minutes -->
+    </schedule>
+
+    <binding>loose</binding>
+
+</task>

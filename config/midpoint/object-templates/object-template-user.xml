@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objectTemplate oid="10000000-0000-0000-0000-000000000222"
+                xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3">
+    <name>User Template with Auto-Role Assignment</name>
+    <description>Template for automatic role assignment based on department (ABAC) and base Employee role</description>
+
+    <!-- ============================================================ -->
+    <!-- AUTO-ASSIGN: Rôle Employee pour TOUS les utilisateurs actifs -->
+    <!-- Scénario 2 - Étape 3: Assignation automatique à tous -->
+    <!-- TEMPORAIREMENT DÉSACTIVÉ POUR L'IMPORT INITIAL -->
+    <!-- ============================================================ -->
+    <!--
+    <mapping>
+        <name>Auto-assign Employee role to all users</name>
+        <description>Assigne automatiquement le rôle Employee à tout nouvel utilisateur actif</description>
+        <strength>strong</strength>
+        <source>
+            <path>activation/administrativeStatus</path>
+        </source>
+        <expression>
+            <assignmentTargetSearch>
+                <targetType>RoleType</targetType>
+                <filter>
+                    <q:equal>
+                        <q:path>name</q:path>
+                        <q:value>Employee</q:value>
+                    </q:equal>
+                </filter>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <path>assignment</path>
+        </target>
+        <condition>
+            <script>
+                <code>
+                    // Assigner le rôle Employee si l'utilisateur est actif (enabled) ou si le statut n'est pas défini
+                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                    
+                    return administrativeStatus == null || administrativeStatus == ActivationStatusType.ENABLED
+                </code>
+            </script>
+        </condition>
+    </mapping>
+    -->
+
+    <!-- Auto-assign IT Admin role for Informatique department -->
+    <mapping>
+        <name>Auto-assign IT Admin</name>
+        <strength>strong</strength>
+        <source>
+            <path>organization</path>
+        </source>
+        <expression>
+            <assignmentTargetSearch>
+                <targetType>RoleType</targetType>
+                <filter>
+                    <q:equal>
+                        <q:path>name</q:path>
+                        <q:value>IT Admin</q:value>
+                    </q:equal>
+                </filter>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <path>assignment</path>
+        </target>
+        <condition>
+            <script>
+                <code>organization != null &amp;&amp; organization.toString().toLowerCase().contains('informatique')</code>
+            </script>
+        </condition>
+    </mapping>
+
+    <!-- Auto-assign Agent Commercial role for Commercial department -->
+    <mapping>
+        <name>Auto-assign Agent Commercial</name>
+        <strength>strong</strength>
+        <source>
+            <path>organization</path>
+        </source>
+        <expression>
+            <assignmentTargetSearch>
+                <targetType>RoleType</targetType>
+                <filter>
+                    <q:equal>
+                        <q:path>name</q:path>
+                        <q:value>Agent Commercial</q:value>
+                    </q:equal>
+                </filter>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <path>assignment</path>
+        </target>
+        <condition>
+            <script>
+                <code>organization != null &amp;&amp; organization.toString().toLowerCase().contains('commercial')</code>
+            </script>
+        </condition>
+    </mapping>
+
+    <!-- Auto-assign RH Manager role for RH/HR department -->
+    <mapping>
+        <name>Auto-assign RH Manager</name>
+        <strength>strong</strength>
+        <source>
+            <path>organization</path>
+        </source>
+        <expression>
+            <assignmentTargetSearch>
+                <targetType>RoleType</targetType>
+                <filter>
+                    <q:equal>
+                        <q:path>name</q:path>
+                        <q:value>RH Manager</q:value>
+                    </q:equal>
+                </filter>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <path>assignment</path>
+        </target>
+        <condition>
+            <script>
+                <code>organization != null &amp;&amp; (organization.toString().toLowerCase().contains('rh') || organization.toString().toLowerCase().contains('human'))</code>
+            </script>
+        </condition>
+    </mapping>
+
+</objectTemplate>

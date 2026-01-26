@@ -1,0 +1,17 @@
+personalNumber,givenName,familyName,email,department,title,manager,status,hireDate,location
+1001,Jean,Dupont,jean.dupont@example.com,Commercial,Agent Commercial Senior,1050,Active,2020-03-15,Paris
+1002,Marie,Martin,marie.martin@example.com,Ressources Humaines,Responsable RH,1050,Active,2019-06-01,Lyon
+1003,Pierre,Bernard,pierre.bernard@example.com,Commercial,Agent Commercial,1001,Active,2021-09-10,Paris
+1004,Sophie,Dubois,sophie.dubois@example.com,Informatique,Développeur Senior,1040,Active,2018-11-20,Paris
+1005,Luc,Thomas,luc.thomas@example.com,Comptabilité,Comptable,1050,Active,2022-01-05,Lyon
+1006,Claire,Robert,claire.robert@example.com,Commercial,Manager Commercial,1050,Active,2017-04-12,Paris
+1007,Antoine,Richard,antoine.richard@example.com,Marketing,Chargé de Communication,1030,Active,2021-07-22,Lyon
+1008,Emma,Petit,emma.petit@example.com,Informatique,Chef de Projet IT,1050,Active,2019-08-14,Paris
+1009,Lucas,Durand,lucas.durand@example.com,Commercial,Agent Commercial,1006,Active,2022-05-18,Marseille
+1010,Camille,Leroy,camille.leroy@example.com,Ressources Humaines,Assistant RH,1002,Active,2023-02-10,Lyon
+1011,Hugo,Moreau,hugo.moreau@example.com,Informatique,Développeur,1008,Active,2023-03-01,Paris
+1012,Léa,Simon,lea.simon@example.com,Commercial,Agent Commercial,1006,Suspended,2020-11-25,Marseille
+1013,Noah,Laurent,noah.laurent@example.com,Comptabilité,Assistant Comptable,1005,Active,2022-09-07,Lyon
+1014,Chloé,Lefebvre,chloe.lefebvre@example.com,Marketing,Responsable Marketing,1050,Active,2018-05-30,Paris
+1015,Gabriel,Michel,gabriel.michel@example.com,Commercial,Agent Commercial Junior,1003,Active,2023-06-15,Paris
+

@@ -1,0 +1,13 @@
+username,full_name,email,department,enabled,roles
+jean.dupont,Jean Dupont,jean.dupont@example.com,Commercial,true,AGENT_COMMERCIAL
+marc.demo,Marc Demo,mark.brown23@example.com,Commercial,true,AGENT_COMMERCIAL
+sharlene.rhodes,Sharlene Rhodes,sharlene.rhodes49@example.com,Commercial,true,AGENT_COMMERCIAL
+ernest.reed,Ernest Reed,ernest.reed47@example.com,Commercial,true,AGENT_COMMERCIAL
+abigail.peterson,Abigail Peterson,abigail.peterson39@example.com,Commercial,true,AGENT_COMMERCIAL
+rachel.perry,Rachel Perry,jod@odoo.com,Commercial,true,AGENT_COMMERCIAL
+parami.sidi,Parami Sidi,parami@gmail.com,Informatique,true,IT_ADMIN
+franois.mercier,François Mercier,francois.mercier@example.com,Informatique,true,IT_ADMIN
+ousmane.jomie,Ousmane Jomie,sidibe.osm@gmail.com,Commercial,true,AGENT_COMMERCIAL
+demo.jomie,demo jomie,demo.jomie@example.com,Commercial,true,AGENT_COMMERCIAL
+test.sidibe,test Sidibe,sie.osm@gmail.com,Informatique,true,IT_ADMIN
+marie.martin,Marie Martin,marie.martin@example.com,Ressources Humaines,true,RH_MANAGER

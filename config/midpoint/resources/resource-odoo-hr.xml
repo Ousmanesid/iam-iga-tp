@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Odoo HR (Source)
+  Lecture des employés depuis Odoo pour synchronisation automatique vers MidPoint.
+  Les rôles seront auto-assignés selon le département.
+  Utilise le connecteur DatabaseTable avec JDBC PostgreSQL.
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d80"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo HR Source</name>
+    <description>Source des employés Odoo (table hr_employee) pour auto-provisioning via DatabaseTable</description>
+
+    <!-- Connecteur DatabaseTable (disponible par défaut) -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>org.identityconnectors.databasetable.DatabaseTableConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcdbtable="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-databasetable/org.identityconnectors.databasetable.DatabaseTableConnector">
+        <icfc:configurationProperties>
+            <!-- Configuration JDBC PostgreSQL -->
+            <icfcdbtable:host>odoo-db</icfcdbtable:host>
+            <icfcdbtable:port>5432</icfcdbtable:port>
+            <icfcdbtable:database>odoo</icfcdbtable:database>
+            <icfcdbtable:user>odoo</icfcdbtable:user>
+            <icfcdbtable:password>
+                <t:clearValue>odoo</t:clearValue>
+            </icfcdbtable:password>
+            
+            <!-- Configuration de la table hr_employee -->
+            <icfcdbtable:table>hr_employee</icfcdbtable:table>
+            <icfcdbtable:keyColumn>id</icfcdbtable:keyColumn>
+            
+            <!-- Driver JDBC PostgreSQL -->
+            <icfcdbtable:jdbcDriver>org.postgresql.Driver</icfcdbtable:jdbcDriver>
+            <icfcdbtable:jdbcUrlTemplate>jdbc:postgresql://%h:%p/%d</icfcdbtable:jdbcUrlTemplate>
+            
+            <!-- Options -->
+            <icfcdbtable:enableEmptyString>false</icfcdbtable:enableEmptyString>
+            <icfcdbtable:quoting>DOUBLE</icfcdbtable:quoting>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Odoo Employee</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- ID employé comme identifiant -->
+            <attribute>
+                <ref>ri:id</ref>
+                <displayName>Employee ID</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>personalNumber</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <!-- Nom de l'employé -->
+            <attribute>
+                <ref>ri:name</ref>
+                <displayName>Full Name</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>fullName</path>
+                    </target>
+                </inbound>
+                <!-- Parser prénom/nom depuis le nom complet -->
+                <inbound>
+                    <strength>weak</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                if (input == null) return null
+                                def parts = input.toString().split(' ', 2)
+                                return parts.length > 0 ? parts[0] : null
+                            </code>
+                        </script>
+                    </expression>
+                    <target>
+                        <path>givenName</path>
+                    </target>
+                </inbound>
+                <inbound>
+                    <strength>weak</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                if (input == null) return null
+                                def parts = input.toString().split(' ', 2)
+                                return parts.length > 1 ? parts[1] : input
+                            </code>
+                        </script>
+                    </expression>
+                    <target>
+                        <path>familyName</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <!-- Email -->
+            <attribute>
+                <ref>ri:work_email</ref>
+                <displayName>Work Email</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>emailAddress</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <!-- Département (pour auto-assign des rôles) -->
+            <attribute>
+                <ref>ri:department_id</ref>
+                <displayName>Department ID</displayName>
+                <!-- On va chercher le nom du département via une expression -->
+            </attribute>
+
+            <!-- Job Title -->
+            <attribute>
+                <ref>ri:job_title</ref>
+                <displayName>Job Title</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>title</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <!-- Active status -->
+            <attribute>
+                <ref>ri:active</ref>
+                <displayName>Active</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                
+                                if (input == null || input == false) {
+                                    return ActivationStatusType.DISABLED
+                                }
+                                return ActivationStatusType.ENABLED
+                            </code>
+                        </script>
+                    </expression>
+                    <target>
+                        <path>activation/administrativeStatus</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <activation>
+                <administrativeStatus>
+                    <inbound>
+                        <strength>strong</strength>
+                    </inbound>
+                </administrativeStatus>
+            </activation>
+        </objectType>
+    </schemaHandling>
+
+    <synchronization>
+        <objectSynchronization>
+            <objectClass>ri:AccountObjectClass</objectClass>
+            <kind>account</kind>
+            <intent>default</intent>
+            <enabled>true</enabled>
+            
+            <!-- Corrélation par email ou nom -->
+            <correlation>
+                <q:equal>
+                    <q:path>emailAddress</q:path>
+                    <q:expression>
+                        <path>$account/attributes/ri:work_email</path>
+                    </q:expression>
+                </q:equal>
+            </correlation>
+
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            <reaction>
+                <situation>unlinked</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unmatched</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#addFocus</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>deleted</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
+
+    <capabilities xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+        <configured>
+            <cap:read>
+                <cap:enabled>true</cap:enabled>
+            </cap:read>
+            <cap:create>
+                <cap:enabled>false</cap:enabled>
+            </cap:create>
+            <cap:update>
+                <cap:enabled>false</cap:enabled>
+            </cap:update>
+            <cap:delete>
+                <cap:enabled>false</cap:enabled>
+            </cap:delete>
+        </configured>
+    </capabilities>
+
+</resource>

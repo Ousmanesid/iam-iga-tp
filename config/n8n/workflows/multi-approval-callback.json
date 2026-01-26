@@ -1,0 +1,347 @@
+{
+  "name": "Multi-Approval Callback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "multi-approval-callback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "multi-approval-callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gérer le workflow multi-étapes\nconst query = $input.first().json.query || {};\nconst requestId = query.request_id || query.requestId;\nconst step = parseInt(query.step || '0');\nconst decision = query.decision || 'rejected';\n\nif (!requestId) {\n  throw new Error('request_id manquant');\n}\n\n// Récupérer les données du workflow original depuis le staticData ou une base\n// Pour l'instant, on utilise les données passées en query\nconst approvalChain = JSON.parse(query.approval_chain || '[]');\nconst totalSteps = approvalChain.length;\nconst isLastStep = step >= totalSteps - 1;\nconst isApproved = decision === 'approved';\n\nreturn {\n  request_id: requestId,\n  step: step,\n  total_steps: totalSteps,\n  decision: decision,\n  is_approved: isApproved,\n  is_last_step: isLastStep,\n  approval_chain: approvalChain,\n  comment: query.comment || null,\n  approved_by: query.approved_by || query.email || 'unknown',\n  timestamp: new Date().toISOString(),\n  // Données utilisateur (à récupérer depuis la demande originale)\n  user_data: JSON.parse(query.user_data || '{}'),\n  requested_roles: JSON.parse(query.requested_roles || '[]'),\n  target_system: query.target_system || 'homeapp'\n};"
+      },
+      "id": "process-decision",
+      "name": "Traiter décision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-rejected",
+              "leftValue": "={{ $json.is_approved }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-rejected",
+      "name": "Rejeté?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/workflow/callback/approval",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, step_order: $json.step, decision: 'rejected', approver_login: $json.approved_by, comment: $json.comment || 'Rejeté à l\\'étape ' + ($json.step + 1) }) }}",
+        "options": {}
+      },
+      "id": "notify-rejected",
+      "name": "Notifier rejet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-last-step",
+              "leftValue": "={{ $json.is_last_step }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-last-step",
+      "name": "Dernière étape?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/workflow/callback/approval",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, step_order: $json.step, decision: 'approved', approver_login: $json.approved_by, comment: 'Toutes les étapes approuvées' }) }}",
+        "options": {}
+      },
+      "id": "notify-all-approved",
+      "name": "Notifier approbation complète",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/provision/users",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ login: $json.user_data.login, email: $json.user_data.email, first_name: $json.user_data.first_name, last_name: $json.user_data.last_name, department: $json.user_data.department, job_title: $json.user_data.job_title, roles: $json.requested_roles }) }}",
+        "options": {}
+      },
+      "id": "provision-user",
+      "name": "Provisionner utilisateur",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1350, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Passer à l'étape suivante\nconst input = $input.first().json;\nconst nextStep = input.step + 1;\nconst approvalChain = input.approval_chain;\nconst nextApprover = approvalChain[nextStep];\n\nreturn {\n  ...input,\n  current_step: nextStep,\n  current_approver: nextApprover,\n  approval_status: 'pending'\n};"
+      },
+      "id": "next-step",
+      "name": "Étape suivante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sidibe.osm@gmail.com",
+        "toEmail": "={{ $json.current_approver.email || 'sidibeousmane2005@gmail.com' }}",
+        "subject": "=[Étape {{ $json.current_step + 1 }}/{{ $json.total_steps }}] Demande d'approbation IAM - {{ $json.user_data.login }}",
+        "emailType": "html",
+        "html": "=<h2>Demande d'approbation de provisioning</h2>\n<p><strong>Étape {{ $json.current_step + 1 }} sur {{ $json.total_steps }}</strong></p>\n<p>Niveau d'approbation: <strong>{{ $json.current_approver.level }}</strong></p>\n\n<h3>Utilisateur concerné</h3>\n<ul>\n<li><strong>Login:</strong> {{ $json.user_data.login }}</li>\n<li><strong>Nom:</strong> {{ $json.user_data.first_name }} {{ $json.user_data.last_name }}</li>\n<li><strong>Email:</strong> {{ $json.user_data.email }}</li>\n<li><strong>Département:</strong> {{ $json.user_data.department }}</li>\n</ul>\n\n<h3>Droits demandés</h3>\n<ul>\n<li><strong>Rôles:</strong> {{ $json.requested_roles.join(', ') }}</li>\n<li><strong>Système cible:</strong> {{ $json.target_system }}</li>\n</ul>\n\n<h3>Chaîne d'approbation</h3>\n<ol>\n{{ $json.approval_chain.map((a, i) => `<li>${a.level}: ${i < $json.current_step ? '✅ Approuvé' : (i === $json.current_step ? '⏳ En attente' : '⬜ À venir')}</li>`).join('') }}\n</ol>\n\n<hr>\n<p>\n<a href='{{ $env.WEBHOOK_URL }}/webhook/multi-approval-callback?request_id={{ $json.request_id }}&step={{ $json.current_step }}&decision=approved&approval_chain={{ encodeURIComponent(JSON.stringify($json.approval_chain)) }}&user_data={{ encodeURIComponent(JSON.stringify($json.user_data)) }}&requested_roles={{ encodeURIComponent(JSON.stringify($json.requested_roles)) }}&target_system={{ $json.target_system }}' style='background-color: green; color: white; padding: 10px 20px; text-decoration: none; margin-right: 10px;'>✅ APPROUVER</a>\n<a href='{{ $env.WEBHOOK_URL }}/webhook/multi-approval-callback?request_id={{ $json.request_id }}&step={{ $json.current_step }}&decision=rejected' style='background-color: red; color: white; padding: 10px 20px; text-decoration: none;'>❌ REJETER</a>\n</p>",
+        "options": {}
+      },
+      "id": "send-next-email",
+      "name": "Envoyer email étape suivante",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1350, 300],
+      "credentials": {
+        "smtp": {
+          "id": "mA4Dc5a8vK6LYplR",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: red;'>❌ Demande rejetée</h1><p>Le workflow a été arrêté.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-rejected",
+      "name": "Réponse - Rejeté",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: green;'>✅ Toutes les étapes approuvées</h1><p>Le provisioning est en cours.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-complete",
+      "name": "Réponse - Terminé",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1570, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: blue;'>✅ Étape approuvée</h1><p>L'étape suivante a été déclenchée.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-next-step",
+      "name": "Réponse - Étape suivante",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1570, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Traiter décision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traiter décision": {
+      "main": [
+        [
+          {
+            "node": "Rejeté?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rejeté?": {
+      "main": [
+        [
+          {
+            "node": "Dernière étape?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notifier rejet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier rejet": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Rejeté",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dernière étape?": {
+      "main": [
+        [
+          {
+            "node": "Notifier approbation complète",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Étape suivante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notifier approbation complète": {
+      "main": [
+        [
+          {
+            "node": "Provisionner utilisateur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provisionner utilisateur": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Terminé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Étape suivante": {
+      "main": [
+        [
+          {
+            "node": "Envoyer email étape suivante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer email étape suivante": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Étape suivante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "approval", "multi-step", "callback"]
+}
+

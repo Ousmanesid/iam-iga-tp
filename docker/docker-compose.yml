@@ -1,0 +1,302 @@
+version: '3.8'
+
+services:
+  # MidPoint IAM Server avec base H2 embarquée
+  midpoint:
+    image: evolveum/midpoint:4.8
+    container_name: midpoint
+    hostname: midpoint
+    ports:
+      - "8080:8080"
+    environment:
+      - MP_SET_midpoint_administrator_initialPassword=5ecr3t
+      - MP_UNSET_midpoint_keystore_keyStorePassword=-
+      - REPO_DATABASE_TYPE=h2
+      - REPO_JDBC_URL=jdbc:h2:file:/opt/midpoint/var/midpoint
+    volumes:
+      - midpoint_home:/opt/midpoint/var
+      - ../config/midpoint:/opt/midpoint-config:ro
+      - ../data:/opt/midpoint-data
+    networks:
+      - iam_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/midpoint/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Odoo ERP avec sa base PostgreSQL interne
+  odoo-db:
+    image: postgres:15-alpine
+    container_name: odoo-db
+    hostname: odoo-db
+    environment:
+      - POSTGRES_DB=odoo
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+    volumes:
+      - odoo_db_data:/var/lib/postgresql/data
+    networks:
+      - iam_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  odoo:
+    image: odoo:17.0
+    container_name: odoo
+    hostname: odoo
+    depends_on:
+      odoo-db:
+        condition: service_healthy
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=odoo-db
+      - USER=odoo
+      - PASSWORD=odoo
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_extra_addons:/mnt/extra-addons
+    networks:
+      - iam_net
+    command: --
+      --dev=all
+      --database=odoo
+      --db_host=odoo-db
+      --db_port=5432
+      --db_user=odoo
+      --db_password=odoo
+      --load-language=fr_FR
+      --without-demo=False
+
+  # OpenLDAP Server
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    hostname: openldap
+    ports:
+      - "10389:389"
+      - "10636:636"
+    volumes:
+      - openldap_data:/var/lib/ldap
+      - openldap_config:/etc/ldap/slapd.d
+    networks:
+      - iam_net
+    environment:
+      - LDAP_ORGANISATION=Example Corp
+      - LDAP_DOMAIN=example.com
+      - LDAP_ADMIN_PASSWORD=admin
+      - LDAP_CONFIG_PASSWORD=config
+      - LDAP_RFC2307BIS_SCHEMA=true
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=true
+      - LDAP_TLS=false
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -D 'cn=admin,dc=example,dc=com' -w admin -b 'dc=example,dc=com' || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Base PostgreSQL pour l'application Intranet (legacy)
+  intranet-db:
+    image: postgres:15-alpine
+    container_name: intranet-db
+    hostname: intranet-db
+    environment:
+      - POSTGRES_DB=intranet
+      - POSTGRES_USER=intranet
+      - POSTGRES_PASSWORD=intranet123
+    volumes:
+      - intranet_db_data:/var/lib/postgresql/data
+      - ../config/intranet/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iam_net
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intranet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application Intranet PHP
+  intranet-app:
+    build:
+      context: ../app/intranet
+      dockerfile: Dockerfile
+    container_name: intranet-app
+    hostname: intranet-app
+    depends_on:
+      intranet-db:
+        condition: service_healthy
+    ports:
+      - "8090:80"
+    volumes:
+      - ../app/intranet:/var/www/html
+    networks:
+      - iam_net
+    environment:
+      - DB_HOST=intranet-db
+      - DB_NAME=intranet
+      - DB_USER=intranet
+      - DB_PASS=intranet123
+
+  # ==========================================================================
+  # NOUVEAUX SERVICES POUR LE TP AVANCÉ
+  # ==========================================================================
+
+  # Base PostgreSQL pour Home App (provisioning cible)
+  homeapp-db:
+    image: postgres:15-alpine
+    container_name: homeapp-db
+    hostname: homeapp-db
+    environment:
+      - POSTGRES_DB=homeapp
+      - POSTGRES_USER=homeapp
+      - POSTGRES_PASSWORD=homeapp123
+    volumes:
+      - homeapp_db_data:/var/lib/postgresql/data
+      - ../config/homeapp/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iam_net
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # N8N - Workflow Automation pour les approbations et le chatbot
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    hostname: n8n
+    ports:
+      - "5678:5678"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+      - N8N_ENCRYPTION_KEY=super-secret-key-change-me
+      # Configuration pour les workflows
+      - N8N_METRICS=true
+      - N8N_LOG_LEVEL=info
+      # Variables pour la Gateway et MidPoint
+      - GATEWAY_URL=http://gateway:8000
+      - MIDPOINT_URL=http://midpoint:8080/midpoint
+      - MIDPOINT_USER=administrator
+      - MIDPOINT_PASSWORD=5ecr3t
+      # Configuration LLM (cloud par défaut)
+      - LLM_PROVIDER=cloud
+      - LLM_LOCAL_URL=http://host.docker.internal:11434
+      # Variables pour les emails (optionnel)
+      - N8N_EMAIL_MODE=smtp
+      # Autoriser l'accès aux variables d'environnement dans les workflows
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../config/n8n/workflows:/home/node/workflows:ro
+    networks:
+      - iam_net
+    depends_on:
+      - homeapp-db
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Gateway HTTP - Interface entre MidPoint, N8N, HomeApp et Supabase
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    hostname: gateway
+    ports:
+      - "8000:8000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      # Configuration générale
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - APP_PORT=8000
+      # Base de données Home App
+      - HOMEAPP_DB_HOST=homeapp-db
+      - HOMEAPP_DB_PORT=5432
+      - HOMEAPP_DB_NAME=homeapp
+      - HOMEAPP_DB_USER=homeapp
+      - HOMEAPP_DB_PASSWORD=homeapp123
+      # MidPoint
+      - MIDPOINT_URL=http://midpoint:8080/midpoint
+      - MIDPOINT_USER=administrator
+      - MIDPOINT_PASSWORD=5ecr3t
+      # N8N
+      - N8N_URL=http://n8n:5678
+      - N8N_USER=admin
+      - N8N_PASSWORD=admin123
+      # Supabase (optionnel - à configurer)
+      - SUPABASE_ENABLED=false
+      - SUPABASE_URL=
+      - SUPABASE_SERVICE_KEY=
+      # LLM Configuration
+      - LLM_PROVIDER=cloud
+      - LLM_LOCAL_URL=http://host.docker.internal:11434
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - ../gateway:/app
+    networks:
+      - iam_net
+    depends_on:
+      homeapp-db:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  iam_net:
+    driver: bridge
+    name: iam_net
+
+volumes:
+  midpoint_home:
+    name: midpoint_home
+  odoo_db_data:
+    name: odoo_db_data
+  odoo_data:
+    name: odoo_data
+  odoo_extra_addons:
+    name: odoo_extra_addons
+  openldap_data:
+    name: openldap_data
+  openldap_config:
+    name: openldap_config
+  intranet_db_data:
+    name: intranet_db_data
+  # Nouveaux volumes
+  homeapp_db_data:
+    name: homeapp_db_data
+  n8n_data:
+    name: n8n_data

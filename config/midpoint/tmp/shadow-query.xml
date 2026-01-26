@@ -1,0 +1,12 @@
+<q:query xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+         xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3">
+    <q:filter>
+        <q:equal>
+            <q:path>resourceRef</q:path>
+            <q:value>
+                <c:oid>8a83b1a4-be18-11e6-ae84-7301fdab1d7c</c:oid>
+            </q:value>
+        </q:equal>
+    </q:filter>
+</q:query>
+

@@ -1,0 +1,98 @@
+================================================================================
+                        🚀 DÉMARRAGE RAPIDE
+                    Projet IGA - MidPoint + LDAP
+================================================================================
+
+⏱️  Temps estimé : 10 minutes
+
+📋 PRÉREQUIS
+================================================================================
+✓ Docker et Docker Compose installés
+✓ Python 3.8+
+✓ 8 Go RAM disponible
+✓ Ports 8080, 8069, 10389 libres
+
+🎬 ÉTAPES DE DÉMARRAGE
+================================================================================
+
+1️⃣  DÉMARRER LA STACK
+   cd /root/iam-iga-tp
+   ./scripts/up.sh
+
+   ⏳ Attendre 2-3 minutes...
+
+2️⃣  INITIALISER LDAP
+   ./scripts/init-ldap.sh
+
+3️⃣  PRÉPARER LES DONNÉES RH
+   python3 scripts/clean_hr_csv.py
+
+4️⃣  ACCÉDER À MIDPOINT
+   🌐 http://localhost:8080/midpoint
+   👤 administrator / 🔒 5ecr3t
+
+5️⃣  IMPORTER LES RESSOURCES (dans MidPoint UI)
+   Configuration → Repository objects → Import object
+   
+   Importer dans l'ordre :
+   a) config/midpoint/resources/resource-hr-csv.xml
+   b) config/midpoint/resources/resource-ldap.xml
+   c) config/midpoint/resources/resource-intranet-csv.xml
+
+   Tester chaque ressource : Resources → [Nom] → Test connection
+
+6️⃣  IMPORTER LA TÂCHE D'IMPORT
+   Configuration → Repository objects → Import object
+   → config/midpoint/tasks/task-hr-import.xml
+
+7️⃣  LANCER L'IMPORT DES UTILISATEURS
+   Server Tasks → HR CSV Import Task → Run now
+   
+   Rafraîchir la page après 10-20 secondes
+
+8️⃣  VÉRIFIER L'IMPORT
+   Users → All users
+   → Vérifier la présence de 15 utilisateurs
+
+9️⃣  IMPORTER LE RÔLE
+   Configuration → Repository objects → Import object
+   → config/midpoint/roles/role-agent-commercial.xml
+
+🔟 TESTER L'AUTO-ASSIGNATION ABAC
+   Users → Sélectionner "Jean Dupont" (département Commercial)
+   → Cliquer sur "Recompute"
+   → Vérifier l'assignation du rôle "Agent Commercial"
+
+✅ VALIDATION
+================================================================================
+
+Vérifier dans LDAP :
+   ldapsearch -x -H ldap://localhost:10389 \
+     -D "cn=admin,dc=example,dc=com" -w admin \
+     -b "ou=users,dc=example,dc=com" \
+     "(uid=jean.dupont)"
+
+Vérifier les comptes intranet :
+   cat data/intranet/accounts.csv
+
+📚 POUR ALLER PLUS LOIN
+================================================================================
+
+→ README.txt                : Documentation complète
+→ docs/guide-installation.md : Guide détaillé
+→ docs/scenarios-test.md     : Scénarios de test avancés
+
+🛑 ARRÊTER LA STACK
+================================================================================
+   ./scripts/down.sh
+
+🔄 RÉINITIALISER (⚠️ supprime les données)
+================================================================================
+   ./scripts/reset.sh
+
+📧 SUPPORT
+================================================================================
+   achibani@gmail.com
+
+================================================================================
+

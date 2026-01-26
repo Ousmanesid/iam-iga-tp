@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Role Definition: RH Manager
+  Rôle RBAC avec condition ABAC basée sur le département Ressources Humaines
+  
+  Ce rôle est automatiquement assigné aux utilisateurs du département RH
+  et leur donne accès aux données RH via:
+  - Appartenance au groupe LDAP "rh-team"
+  - Rôle applicatif "RH_MANAGER" dans l'intranet
+-->
+<role oid="12345678-d34d-b33f-f00d-987987987989"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>RH Manager</name>
+    <description>
+        Rôle pour les responsables RH avec accès aux données employés.
+        Assigné automatiquement aux membres du département Ressources Humaines.
+    </description>
+
+    <!-- Politique d'assignation automatique (autoassignment) basée sur ABAC -->
+    <autoassign>
+        <enabled>true</enabled>
+        <focus>
+            <selector>
+                <type>UserType</type>
+                <filter>
+                    <q:and>
+                        <!-- Condition ABAC: département = Ressources Humaines -->
+                        <q:equal>
+                            <q:path>organization</q:path>
+                            <q:value>Ressources Humaines</q:value>
+                        </q:equal>
+                        <!-- Uniquement les comptes actifs -->
+                        <q:equal>
+                            <q:path>activation/administrativeStatus</q:path>
+                            <q:value>enabled</q:value>
+                        </q:equal>
+                    </q:and>
+                </filter>
+            </selector>
+        </focus>
+    </autoassign>
+
+    <!-- Construction 1: Provisioning vers LDAP (groupe rh-team) -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            
+            <!-- Association au groupe LDAP rh-team -->
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationTargetSearch>
+                            <filter>
+                                <q:equal>
+                                    <q:path>attributes/cn</q:path>
+                                    <q:value>rh-team</q:value>
+                                </q:equal>
+                            </filter>
+                        </associationTargetSearch>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+
+    <!-- Construction 2: Provisioning vers Intranet CSV -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7e" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+
+    <requestable>false</requestable>
+
+</role>
+
+
+
+
+
+
+
+

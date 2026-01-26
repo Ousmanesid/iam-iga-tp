@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Intranet Accounts CSV
+  Système cible pour le provisioning des comptes applicatifs intranet
+  
+  Ce fichier définit comment MidPoint provisionne les utilisateurs
+  vers le fichier CSV des comptes intranet.
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7e"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Intranet Accounts CSV</name>
+    <description>Fichier CSV pour les comptes utilisateurs de l'application intranet</description>
+
+    <!-- Configuration du connecteur CSV -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>com.evolveum.polygon.connector.csv.CsvConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3">
+        <icfc:configurationProperties
+                xmlns:icfccsvfile="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-csv/com.evolveum.polygon.connector.csv.CsvConnector">
+            
+            <!-- Chemin du fichier CSV -->
+            <icfccsvfile:filePath>/opt/midpoint-data/intranet/accounts.csv</icfccsvfile:filePath>
+            
+            <!-- Encodage -->
+            <icfccsvfile:encoding>UTF-8</icfccsvfile:encoding>
+            
+            <!-- Délimiteur de champs -->
+            <icfccsvfile:fieldDelimiter>,</icfccsvfile:fieldDelimiter>
+            
+            <!-- Caractère de citation -->
+            
+            
+            <!-- Attribut unique (identifiant) -->
+            <icfccsvfile:uniqueAttribute>username</icfccsvfile:uniqueAttribute>
+            
+            <!-- Attribut nom (obligatoire pour le connecteur) -->
+            <icfccsvfile:nameAttribute>username</icfccsvfile:nameAttribute>
+            
+            <!-- Mode lecture/écriture -->
+            <icfccsvfile:readOnly>false</icfccsvfile:readOnly>
+            
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <!-- Schéma: définition des attributs -->
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Intranet Account</displayName>
+            <default>true</default>
+            
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- Mapping: username (identifiant unique) -->
+            <attribute>
+                <ref>ri:username</ref>
+                <displayName>Username</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                
+                                if (!firstName || !lastName) {
+                                    return null
+                                }
+                                
+                                return firstName + '.' + lastName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: full_name -->
+            <attribute>
+                <ref>ri:full_name</ref>
+                <displayName>Full Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                return givenName + ' ' + familyName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: email -->
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: department -->
+            <attribute>
+                <ref>ri:department</ref>
+                <displayName>Department</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/organization</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: enabled (activation) -->
+            <attribute>
+                <ref>ri:enabled</ref>
+                <displayName>Enabled</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType;
+                                
+                                def status = user?.getActivation()?.getAdministrativeStatus()
+                                
+                                if (status == ActivationStatusType.ENABLED) {
+                                    return 'true'
+                                } else {
+                                    return 'false'
+                                }
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: roles (rôles applicatifs, séparés par virgule) -->
+            <attribute>
+                <ref>ri:roles</ref>
+                <displayName>Application Roles</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                // Collecte tous les rôles assignés à l'utilisateur
+                                def roleNames = []
+                                
+                                user?.getAssignment()?.each { assignment ->
+                                    if (assignment.getTargetRef()?.getType()?.getLocalPart() == 'RoleType') {
+                                        def roleOid = assignment.getTargetRef()?.getOid()
+                                        
+                                        // Récupérer le nom du rôle via son OID
+                                        def role = midpoint.getObject(com.evolveum.midpoint.xml.ns._public.common.common_3.RoleType.class, roleOid)
+                                        if (role) {
+                                            def roleName = role.getName()?.getOrig()
+                                            
+                                            // Extraire un nom de rôle simplifié pour l'application
+                                            if (roleName?.contains('Agent Commercial')) {
+                                                roleNames.add('AGENT_COMMERCIAL')
+                                            } else if (roleName?.contains('RH')) {
+                                                roleNames.add('RH_MANAGER')
+                                            } else if (roleName?.contains('IT')) {
+                                                roleNames.add('IT_ADMIN')
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                return roleNames.isEmpty() ? 'USER' : roleNames.join(',')
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Activation (comptes actifs/suspendus) -->
+            <activation>
+                <administrativeStatus>
+                    <outbound>
+                        <strength>strong</strength>
+                    </outbound>
+                </administrativeStatus>
+            </activation>
+
+        </objectType>
+    </schemaHandling>
+
+    <!-- Capabilities -->
+    <capabilities xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+        <configured>
+            <cap:activation>
+                <cap:status>
+                    <cap:attribute>ri:enabled</cap:attribute>
+                    <cap:enableValue>true</cap:enableValue>
+                    <cap:disableValue>false</cap:disableValue>
+                </cap:status>
+            </cap:activation>
+            <cap:create>
+                <cap:enabled>true</cap:enabled>
+            </cap:create>
+            <cap:update>
+                <cap:enabled>true</cap:enabled>
+            </cap:update>
+            <cap:delete>
+                <cap:enabled>true</cap:enabled>
+            </cap:delete>
+        </configured>
+    </capabilities>
+
+</resource>
+

@@ -1,0 +1,171 @@
+{
+  "name": "Review Callback (Post-Provision)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "review-callback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "review-callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer les données pour le callback Gateway\nconst query = $input.first().json.query || {};\nconst requestId = query.request_id || query.requestId;\nconst approved = query.approved === 'true' || query.approved === true;\nconst reviewer = query.reviewer || query.reviewed_by || 'unknown';\nconst comment = query.comment || null;\n\nif (!requestId) {\n  throw new Error('request_id manquant dans les paramètres');\n}\n\nreturn {\n  request_id: requestId,\n  approved: approved,\n  reviewer: reviewer,\n  comment: comment,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-callback",
+      "name": "Préparer callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/workflow/callback/review",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, approved: $json.approved, reviewer: $json.reviewer, comment: $json.comment }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "call-gateway",
+      "name": "Appeler Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-approved",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-approved",
+      "name": "Approuvé?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: green;'>✅ Compte validé</h1><p>Le compte a été confirmé et reste actif.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-approved",
+      "name": "Réponse - Validé",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: red;'>❌ Compte rejeté</h1><p>Le compte va être désactivé.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-rejected",
+      "name": "Réponse - Rejeté",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer callback": {
+      "main": [
+        [
+          {
+            "node": "Appeler Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appeler Gateway": {
+      "main": [
+        [
+          {
+            "node": "Approuvé?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approuvé?": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Validé",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse - Rejeté",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "review", "post-provision", "callback"]
+}
+

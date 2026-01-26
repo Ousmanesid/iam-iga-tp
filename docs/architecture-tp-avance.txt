@@ -1,0 +1,247 @@
+================================================================================
+    DOCUMENTATION TECHNIQUE - TP IAM AVANCÉ
+    Workflows d'approbation, Connecteurs et Chatbot IA
+================================================================================
+
+📋 VUE D'ENSEMBLE DE L'ARCHITECTURE
+================================================================================
+
+L'architecture implémentée comprend les composants suivants:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ARCHITECTURE IAM COMPLÈTE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────┐                    ┌─────────────┐                         │
+│  │  Odoo RH    │  CSV               │  Salesforce │  (API)                  │
+│  │  (Source)   │ ───────────────────│  (Source)   │                         │
+│  └─────────────┘                    └─────────────┘                         │
+│         │                                  │                                 │
+│         └──────────────┬───────────────────┘                                │
+│                        ▼                                                     │
+│              ┌─────────────────┐                                            │
+│              │    MIDPOINT     │ ◄──────────────────────┐                   │
+│              │  (Central IAM)  │                        │                   │
+│              └────────┬────────┘                        │                   │
+│                       │                                 │                   │
+│         ┌─────────────┼─────────────┐                  │                   │
+│         ▼             ▼             ▼                  │                   │
+│   ┌──────────┐  ┌──────────┐  ┌──────────┐            │                   │
+│   │ Apache   │  │  Odoo    │  │ Gateway  │            │                   │
+│   │   DS     │  │  User    │  │  HTTP    │ ◄──────────┼───┐               │
+│   │ (LDAP)   │  │ (Target) │  │ (Python) │            │   │               │
+│   └──────────┘  └──────────┘  └────┬─────┘            │   │               │
+│                                    │                   │   │               │
+│                      ┌─────────────┼─────────────┐    │   │               │
+│                      ▼             ▼             ▼    │   │               │
+│                ┌──────────┐  ┌──────────┐  ┌─────────┐│   │               │
+│                │ Home App │  │ Supabase │  │   N8N   ││   │               │
+│                │PostgreSQL│  │ (Cloud)  │  │Workflows││   │               │
+│                └──────────┘  └──────────┘  └────┬────┘│   │               │
+│                                                  │     │   │               │
+│                                    ┌─────────────┘     │   │               │
+│                                    ▼                   │   │               │
+│                              ┌───────────┐             │   │               │
+│                              │  Chatbot  │ ────────────┘   │               │
+│                              │    IA     │                 │               │
+│                              └─────┬─────┘                 │               │
+│                                    │                       │               │
+│                         ┌──────────┴──────────┐            │               │
+│                         ▼                     ▼            │               │
+│                   ┌──────────┐          ┌──────────┐       │               │
+│                   │ LLM Cloud│          │LLM Local │       │               │
+│                   │(OpenAI)  │          │ (Ollama) │       │               │
+│                   └──────────┘          └──────────┘       │               │
+│                                                            │               │
+│  ┌─────────────────────────────────────────────────────────┘               │
+│  │ UTILISATEURS                                                            │
+│  │  • Managers (demandes via Chatbot)                                      │
+│  │  • RH (approbations workflows)                                          │
+│  │  • IT Admin (configuration)                                             │
+│  └─────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+📁 STRUCTURE DES FICHIERS CRÉÉS
+================================================================================
+
+/iam-iga-tp/
+├── config/
+│   ├── homeapp/
+│   │   ├── init.sql                    # Schéma PostgreSQL Home App
+│   │   └── supabase-schema.sql         # Schéma équivalent pour Supabase
+│   ├── midpoint/
+│   │   ├── resources/
+│   │   │   └── resource-homeapp-postgresql.xml  # Connecteur PostgreSQL
+│   │   └── roles/
+│   │       ├── role-homeapp-user.xml       # Rôle utilisateur de base
+│   │       ├── role-homeapp-admin.xml      # Rôle admin (avec approbation)
+│   │       └── role-homeapp-commercial.xml # Rôle ABAC commercial
+│   └── n8n/
+│       └── workflows/
+│           ├── pre-provision-simple.json   # Workflow 1 étape
+│           ├── pre-provision-multi.json    # Workflow multi-étapes
+│           ├── post-provision.json         # Workflow post-provisioning
+│           └── chatbot-action.json         # Workflow chatbot
+├── gateway/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── env.example
+│   ├── main.py                         # Point d'entrée FastAPI
+│   └── app/
+│       ├── config.py                   # Configuration
+│       ├── models/
+│       │   ├── user.py                 # Modèles utilisateurs
+│       │   └── request.py              # Modèles workflows/chatbot
+│       ├── routers/
+│       │   ├── provision.py            # API provisioning
+│       │   ├── workflow.py             # API workflows
+│       │   └── chatbot.py              # API chatbot
+│       └── services/
+│           ├── homeapp_db.py           # Service PostgreSQL
+│           ├── n8n.py                  # Service N8N
+│           ├── midpoint.py             # Service MidPoint
+│           ├── llm.py                  # Service LLM (cloud/local)
+│           └── supabase.py             # Service Supabase
+├── docker/
+│   └── docker-compose.yml              # Stack complète mise à jour
+└── scripts/
+    └── start-full-stack.sh             # Script démarrage complet
+
+
+🔌 ENDPOINTS DE LA GATEWAY API (http://localhost:8000)
+================================================================================
+
+PROVISIONING (/provision):
+  POST   /provision/users                    Créer un utilisateur
+  GET    /provision/users/{login}            Obtenir un utilisateur
+  GET    /provision/users?q=...              Rechercher des utilisateurs
+  PATCH  /provision/users/{login}            Mettre à jour un utilisateur
+  POST   /provision/users/{login}/disable    Désactiver un utilisateur
+  POST   /provision/users/{login}/enable     Activer un utilisateur
+  DELETE /provision/users/{login}            Supprimer un utilisateur
+  POST   /provision/roles/assign             Assigner un rôle
+  POST   /provision/roles/revoke             Révoquer un rôle
+  GET    /provision/users/{login}/roles      Lister les rôles
+  POST   /provision/permissions/assign       Assigner une permission
+  POST   /provision/permissions/revoke       Révoquer une permission
+  GET    /provision/users/{login}/permissions  Lister les permissions
+
+WORKFLOWS (/workflow):
+  POST   /workflow/pre-provision             Déclencher pré-provisioning
+  POST   /workflow/post-provision            Déclencher post-provisioning
+  POST   /workflow/callback/approval         Callback approbation (N8N)
+  POST   /workflow/callback/review           Callback revue (N8N)
+  GET    /workflow/requests/pending          Lister demandes en attente
+  POST   /workflow/midpoint/hook             Hook MidPoint
+
+CHATBOT (/chat):
+  POST   /chat/message                       Envoyer un message au chatbot
+  GET    /chat/health                        État du chatbot/LLM
+  POST   /chat/direct-action                 Action directe (test)
+
+
+📊 BASE DE DONNÉES HOME APP
+================================================================================
+
+Tables principales:
+  • users              - Comptes utilisateurs
+  • permissions        - Permissions granulaires (crm.read, hr.write, etc.)
+  • roles              - Rôles (USER, AGENT_COMMERCIAL, IT_ADMIN, etc.)
+  • role_permissions   - Liaison rôle ↔ permissions
+  • user_roles         - Assignation utilisateur ↔ rôles
+  • user_permissions   - Permissions directes (bypass rôles)
+
+Tables workflows:
+  • provisioning_requests  - Demandes de provisioning
+  • approval_steps         - Étapes d'approbation
+  • audit_log              - Journal d'audit
+
+Fonctions SQL:
+  • upsert_user()                    - Créer/mettre à jour utilisateur
+  • assign_role_to_user()            - Assigner un rôle
+  • revoke_role_from_user()          - Révoquer un rôle
+  • get_user_effective_permissions() - Toutes permissions d'un user
+  • user_has_permission()            - Vérifier une permission
+
+
+⚙️ WORKFLOWS N8N
+================================================================================
+
+1. PRÉ-PROVISIONING SIMPLE (1 étape)
+   Webhook → Vérifier si approbation requise → 
+   → OUI: Email approbateur → Attendre réponse → Provisioning ou Rejet
+   → NON: Provisioning direct
+
+2. PRÉ-PROVISIONING MULTI-ÉTAPES (N niveaux)
+   Webhook → Initialiser chaîne d'approbation →
+   → Étape 1 (Manager) → Email → Attendre →
+   → Étape 2 (Chef Dept) → Email → Attendre →
+   → Étape 3 (Resp. App) → Email → Attendre →
+   → Toutes OK: Provisioning / Sinon: Rejet
+
+3. POST-PROVISIONING (revue après création)
+   Webhook (après création compte) →
+   → Si revue requise: Email de validation → Attendre →
+   → Si rejet: Désactiver/supprimer le compte
+   → Si validé: Confirmer le provisioning
+
+4. ACTION CHATBOT
+   Webhook → Vérifier si approbation requise →
+   → OUI: Déclencher workflow approbation
+   → NON: Exécuter action via Gateway API
+
+
+🤖 CHATBOT IAM
+================================================================================
+
+Le chatbot comprend les requêtes en langage naturel:
+
+Exemples de commandes:
+  "Donne le rôle Agent Commercial à Jean Dupont"
+  "Retire les droits admin à tous les employés du département Comptabilité"  
+  "Quels sont les rôles de marie.martin?"
+  "Cherche les utilisateurs du département IT"
+  "Liste les rôles disponibles"
+
+Modes LLM supportés:
+  • CLOUD: OpenAI (GPT-4) ou Anthropic (Claude)
+  • LOCAL: Ollama (Mistral, Llama)
+
+Configuration via variable d'environnement:
+  LLM_PROVIDER=cloud   → Utilise OpenAI/Anthropic
+  LLM_PROVIDER=local   → Utilise Ollama
+
+
+🚀 DÉMARRAGE
+================================================================================
+
+# Démarrer la stack complète
+./scripts/start-full-stack.sh
+
+# Ou manuellement
+cd docker
+docker-compose up -d
+
+# Vérifier les services
+docker-compose ps
+
+# Voir les logs
+docker-compose logs -f gateway
+docker-compose logs -f n8n
+
+
+📧 CONTACT
+================================================================================
+Projet IGA - BUT3 Informatique
+Co-auteur: achibani@gmail.com
+
+================================================================================
+
+
+
+
+
+
+
+

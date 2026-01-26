@@ -1,0 +1,16 @@
+<executeScript xmlns="http://midpoint.evolveum.com/xml/ns/public/model/script-3">
+    <script>
+        <code>
+            import com.evolveum.midpoint.xml.ns._public.common.common_3.ShadowType
+
+            def resourceOid = "8a83b1a4-be18-11e6-ae84-7301fdab1d7c"
+            def query = queryFor(ShadowType.class)
+                    .item(ShadowType.F_RESOURCE_REF).ref(resourceOid)
+                    .build()
+
+            midpoint.searchObjects(ShadowType.class, query, null).each { shadow ->
+                midpoint.deleteObject(shadow)
+            }
+        </code>
+    </script>
+</executeScript>

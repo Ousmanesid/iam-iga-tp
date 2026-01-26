@@ -1,0 +1,196 @@
+{
+  "name": "Pre-Provision Simple (1 étape)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pre-provision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "pre-provision"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-approval-required",
+              "leftValue": "={{ $json.body.requires_approval }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-approval",
+      "name": "Approbation requise?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sidibe.osm@gmail.com",
+        "toEmail": "={{ $json.body.approver_email || 'sidibeousmane2005@gmail.com' }}",
+        "subject": "=Demande d'approbation IAM - {{ $json.body.user_data.login }}",
+        "emailType": "html",
+        "html": "=<h2>Demande d'approbation de provisioning</h2>\n<p>Une nouvelle demande de provisioning nécessite votre approbation.</p>\n\n<h3>Utilisateur concerné</h3>\n<ul>\n<li><strong>Login:</strong> {{ $json.body.user_data.login }}</li>\n<li><strong>Nom:</strong> {{ $json.body.user_data.first_name }} {{ $json.body.user_data.last_name }}</li>\n<li><strong>Email:</strong> {{ $json.body.user_data.email }}</li>\n<li><strong>Département:</strong> {{ $json.body.user_data.department }}</li>\n</ul>\n\n<h3>Droits demandés</h3>\n<ul>\n<li><strong>Rôles:</strong> {{ $json.body.requested_roles.join(', ') }}</li>\n<li><strong>Système cible:</strong> {{ $json.body.target_system }}</li>\n</ul>\n\n<h3>Justification</h3>\n<p>{{ $json.body.justification || 'Non spécifiée' }}</p>\n\n<h3>Demandeur</h3>\n<p>{{ $json.body.requester || 'Système' }}</p>\n\n<hr>\n<p>Cliquez sur l'un des liens ci-dessous pour répondre:</p>\n<p>\n<a href='http://localhost:5678/webhook/approval-callback?request_id={{ $json.body.request_id || $execution.id }}&decision=approved' style='background-color: green; color: white; padding: 10px 20px; text-decoration: none; margin-right: 10px;'>✅ APPROUVER</a>\n<a href='http://localhost:5678/webhook/approval-callback?request_id={{ $json.request_id }}&decision=rejected' style='background-color: red; color: white; padding: 10px 20px; text-decoration: none;'>❌ REJETER</a>\n</p>",
+        "options": {}
+      },
+      "id": "send-approval-email",
+      "name": "Envoyer email approbation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [690, 200],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/provision/users",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"login\": \"{{ $json.body.user_data.login }}\",\n  \"email\": \"{{ $json.body.user_data.email }}\",\n  \"first_name\": \"{{ $json.body.user_data.first_name }}\",\n  \"last_name\": \"{{ $json.body.user_data.last_name }}\",\n  \"department\": \"{{ $json.body.user_data.department }}\",\n  \"job_title\": \"{{ $json.body.user_data.job_title }}\",\n  \"is_active\": true,\n  \"roles\": {{ $json.body.requested_roles || [] }},\n  \"permissions\": {{ $json.body.requested_permissions || [] }}\n}",
+        "options": {}
+      },
+      "id": "direct-provision",
+      "name": "Provisioning direct",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Demande d\\'approbation envoyée', requires_approval: true, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-pending",
+      "name": "Réponse - En attente",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Provisioning effectué directement', requires_approval: false, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-done",
+      "name": "Réponse - Terminé",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "pending_approval"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-status-pending",
+      "name": "Statut: En attente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [690, 100]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Approbation requise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approbation requise?": {
+      "main": [
+        [
+          {
+            "node": "Envoyer email approbation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provisioning direct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer email approbation": {
+      "main": [
+        [
+          {
+            "node": "Réponse - En attente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provisioning direct": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Terminé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "provisioning", "approval"]
+}
+
+

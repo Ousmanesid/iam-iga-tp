@@ -1,0 +1,171 @@
+{
+  "name": "Approval Callback (Simple)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "approval-callback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "approval-callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer les données pour le callback Gateway\nconst query = $input.first().json.query || {};\nconst requestId = query.request_id || query.requestId;\nconst decision = query.decision || 'rejected';\n\nif (!requestId) {\n  throw new Error('request_id manquant dans les paramètres');\n}\n\nconst decisionStatus = decision === 'approved' ? 'approved' : 'rejected';\n\nreturn {\n  request_id: requestId,\n  decision: decisionStatus,\n  comment: query.comment || null,\n  approved_by: query.approved_by || query.email || 'unknown',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-callback",
+      "name": "Préparer callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000/workflow/callback/approval",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, step_order: 0, decision: $json.decision, approver_login: $json.approved_by, comment: $json.comment }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "call-gateway",
+      "name": "Appeler Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-approved",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-decision",
+      "name": "Décision approuvée?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: green;'>✅ Demande approuvée</h1><p>Le provisioning va être effectué.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-approved",
+      "name": "Réponse - Approuvé",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "html",
+        "responseBody": "=<html><body style='font-family: Arial, sans-serif; text-align: center; padding: 50px;'><h1 style='color: red;'>❌ Demande rejetée</h1><p>Le provisioning ne sera pas effectué.</p><p>Vous pouvez fermer cette page.</p></body></html>",
+        "options": {}
+      },
+      "id": "response-rejected",
+      "name": "Réponse - Rejeté",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Préparer callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer callback": {
+      "main": [
+        [
+          {
+            "node": "Appeler Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appeler Gateway": {
+      "main": [
+        [
+          {
+            "node": "Décision approuvée?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Décision approuvée?": {
+      "main": [
+        [
+          {
+            "node": "Réponse - Approuvé",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse - Rejeté",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "approval", "callback"]
+}
+

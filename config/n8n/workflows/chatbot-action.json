@@ -1,0 +1,203 @@
+{
+  "name": "Chatbot IAM Action",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "chatbot"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-approval",
+              "leftValue": "={{ $json.requires_approval }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-approval",
+      "name": "Approbation requise?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Déterminer l'action à effectuer\nconst input = $input.first().json;\nconst actionType = input.action_type;\nconst targetUser = input.target_user;\nconst roleOrPermission = input.role_or_permission;\n\nlet gatewayEndpoint = '';\nlet requestBody = {};\n\nswitch(actionType) {\n  case 'assign_role':\n    gatewayEndpoint = '/provision/roles/assign';\n    requestBody = {\n      user_login: targetUser,\n      role_code: roleOrPermission,\n      assigned_by: input.requester || 'chatbot',\n      source: 'chatbot'\n    };\n    break;\n    \n  case 'remove_role':\n    gatewayEndpoint = `/provision/roles/revoke?user_login=${targetUser}&role_code=${roleOrPermission}`;\n    break;\n    \n  case 'assign_permission':\n    gatewayEndpoint = '/provision/permissions/assign';\n    requestBody = {\n      user_login: targetUser,\n      permission_code: roleOrPermission,\n      assigned_by: input.requester || 'chatbot'\n    };\n    break;\n    \n  case 'remove_permission':\n    gatewayEndpoint = `/provision/permissions/revoke?user_login=${targetUser}&permission_code=${roleOrPermission}`;\n    break;\n    \n  default:\n    gatewayEndpoint = '/health';\n}\n\nreturn {\n  ...input,\n  gateway_endpoint: gatewayEndpoint,\n  request_body: requestBody,\n  http_method: actionType.includes('remove') ? 'POST' : 'POST'\n};"
+      },
+      "id": "prepare-action",
+      "name": "Préparer action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://gateway:8000{{ $json.gateway_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "execute-action",
+      "name": "Exécuter action Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, action_executed: true, result: $json.body, execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-success",
+      "name": "Réponse succès",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sidibe.osm@gmail.com",
+        "toEmail": "sidibeousmane2005@gmail.com",
+        "subject": "=Demande d'approbation (Chatbot) - {{ $json.action_type }} {{ $json.role_or_permission }}",
+        "emailType": "html",
+        "html": "=<h2>Demande d'approbation via Chatbot IAM</h2>\n\n<h3>Action demandée</h3>\n<ul>\n<li><strong>Type:</strong> {{ $json.action_type }}</li>\n<li><strong>Utilisateur cible:</strong> {{ $json.target_user }}</li>\n<li><strong>Rôle/Permission:</strong> {{ $json.role_or_permission }}</li>\n</ul>\n\n<h3>Demandeur</h3>\n<p>{{ $json.requester || 'Utilisateur via Chatbot' }}</p>\n\n<h3>Date</h3>\n<p>{{ $json.timestamp }}</p>\n\n<hr>\n<p>\n<a href='http://localhost:5678/webhook/chatbot-approval?action={{ $json.action_type }}&target={{ $json.target_user }}&item={{ $json.role_or_permission }}&decision=approved' style='background-color: green; color: white; padding: 10px 20px; text-decoration: none; margin-right: 10px;'>✅ APPROUVER</a>\n<a href='http://localhost:5678/webhook/chatbot-approval?action={{ $json.action_type }}&target={{ $json.target_user }}&item={{ $json.role_or_permission }}&decision=rejected' style='background-color: red; color: white; padding: 10px 20px; text-decoration: none;'>❌ REJETER</a>\n</p>",
+        "options": {}
+      },
+      "id": "send-approval-request",
+      "name": "Envoyer demande approbation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [690, 200],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, requires_approval: true, message: 'Demande d\\'approbation envoyée', execution_id: $execution.id }) }}",
+        "options": {}
+      },
+      "id": "response-pending-approval",
+      "name": "Réponse - En attente approbation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Approbation requise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approbation requise?": {
+      "main": [
+        [
+          {
+            "node": "Envoyer demande approbation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Préparer action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer action": {
+      "main": [
+        [
+          {
+            "node": "Exécuter action Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exécuter action Gateway": {
+      "main": [
+        [
+          {
+            "node": "Réponse succès",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer demande approbation": {
+      "main": [
+        [
+          {
+            "node": "Réponse - En attente approbation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["iam", "chatbot", "automation"]
+}
+
