@@ -126,37 +126,31 @@
                 </outbound>
             </attribute>
 
-            <!-- Association aux permissions/rôles DB -->
-            <association>
-                <ref>ri:permissions</ref>
-                <displayName>Database Permissions</displayName>
-                <kind>entitlement</kind>
-                <intent>permission</intent>
-                <direction>subjectToObject</direction>
-                <associationAttribute>ri:permissions</associationAttribute>
-                <valueAttribute>ri:permission_name</valueAttribute>
-            </association>
-
-        </objectType>
-
-        <!-- Configuration pour les permissions DB (entitlements) -->
-        <objectType>
-            <kind>entitlement</kind>
-            <intent>permission</intent>
-            <displayName>Database Permission</displayName>
-            <objectClass>ri:PermissionObjectClass</objectClass>
-            
+            <!-- Permission level (app_read, app_write, app_admin_db) -->
+            <!-- Géré via les rôles MidPoint qui définissent la valeur -->
             <attribute>
-                <ref>ri:permission_name</ref>
-                <displayName>Permission Name</displayName>
+                <ref>ri:permission_level</ref>
+                <displayName>Permission Level</displayName>
                 <outbound>
-                    <strength>strong</strength>
-                    <source>
-                        <path>$focus/name</path>
-                    </source>
+                    <strength>weak</strength>
+                    <expression>
+                        <value>app_read</value>
+                    </expression>
                 </outbound>
             </attribute>
-            
+
+            <!-- Enabled status -->
+            <attribute>
+                <ref>ri:enabled</ref>
+                <displayName>Enabled</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+
         </objectType>
     </schemaHandling>
 

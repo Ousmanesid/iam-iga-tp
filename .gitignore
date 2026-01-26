@@ -1,11 +1,10 @@
-# Docker volumes et données
-docker/volumes/
-*.log
+# Fichiers temporaires et résultats
+result*
+*.tmp
+*~
+.DS_Store
 
-# Données générées
-data/hr/hr_clean.csv
-
-# Fichiers temporaires Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -18,14 +17,18 @@ __pycache__/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
-.DS_Store
 Thumbs.db
+
+# Docker volumes et données
+docker/volumes/
+*.log
+
+# Données générées (optionnel - décommenter si nécessaire)
+# data/hr/hr_clean.csv
 
 # Secrets (ne jamais commiter)
 *.key
 *.pem
 secrets/
-

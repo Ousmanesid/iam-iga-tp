@@ -11,11 +11,12 @@
     <inducement>
         <construction>
             <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d84"/>
-            <kind>entitlement</kind>
-            <intent>permission</intent>
+            <kind>account</kind>
+            <intent>default</intent>
             <attribute>
-                <ref>ri:permission_name</ref>
+                <ref>ri:permission_level</ref>
                 <outbound>
+                    <strength>strong</strength>
                     <expression>
                         <value>app_read</value>
                     </expression>

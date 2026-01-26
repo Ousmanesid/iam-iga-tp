@@ -9,9 +9,8 @@
     <!-- ============================================================ -->
     <!-- AUTO-ASSIGN: Rôle Employee pour TOUS les utilisateurs actifs -->
     <!-- Scénario 2 - Étape 3: Assignation automatique à tous -->
-    <!-- TEMPORAIREMENT DÉSACTIVÉ POUR L'IMPORT INITIAL -->
+    <!-- Activé pour l'assignation automatique lors de la synchronisation -->
     <!-- ============================================================ -->
-    <!--
     <mapping>
         <name>Auto-assign Employee role to all users</name>
         <description>Assigne automatiquement le rôle Employee à tout nouvel utilisateur actif</description>
@@ -44,7 +43,6 @@
             </script>
         </condition>
     </mapping>
-    -->
 
     <!-- Auto-assign IT Admin role for Informatique department -->
     <mapping>

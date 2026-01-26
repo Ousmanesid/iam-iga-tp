@@ -61,9 +61,9 @@
             <default>true</default>
             <objectClass>ri:AccountObjectClass</objectClass>
 
-            <!-- ID employé comme identifiant -->
+            <!-- ID employé comme identifiant (keyColumn -> icfs:uid) -->
             <attribute>
-                <ref>ri:id</ref>
+                <ref>icfs:uid</ref>
                 <displayName>Employee ID</displayName>
                 <inbound>
                     <strength>strong</strength>

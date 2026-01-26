@@ -1,0 +1,88 @@
+═══════════════════════════════════════════════════════════════════
+  GUIDES VIDÉO POUR DÉMONSTRATION IAM/IGA
+═══════════════════════════════════════════════════════════════════
+
+📁 FICHIERS DISPONIBLES
+───────────────────────────────────────────────────────────────────
+
+1. GUIDE_SCENARIO_1_ALICE_DOE.md
+   → Scénario manuel : Création et attribution manuelle des droits
+   → Durée : 15-20 minutes
+   → Cas d'usage : Alice Doe
+
+2. GUIDE_SCENARIO_2_AUTO_ASSIGNMENT.md
+   → Scénario automatique : Attribution automatique via synchronisation
+   → Durée : 20-25 minutes
+   → Cas d'usage : John, Micheline, Sabine
+
+═══════════════════════════════════════════════════════════════════
+  RÉSUMÉ DES DEUX SCÉNARIOS
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ SCÉNARIO 1 : Attribution Manuelle (Alice Doe)                  │
+├─────────────────────────────────────────────────────────────────┤
+│ ✅ Créer Alice dans Odoo (employée + contrat)                   │
+│ ✅ Exporter/Importer dans MidPoint                              │
+│ ✅ Assigner manuellement le rôle Employee                       │
+│ ✅ Vérifier provisioning LDAP (4 groupes)                       │
+│ ✅ Vérifier provisioning Odoo (Odoo_User)                      │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ SCÉNARIO 2 : Attribution Automatique (John, Micheline, Sabine) │
+├─────────────────────────────────────────────────────────────────┤
+│ ✅ Présenter le rôle Employee (structure)                      │
+│ ✅ Montrer la règle d'assignation automatique                  │
+│ ✅ John : Création + assignation manuelle                       │
+│ ✅ Micheline & Sabine : Synchronisation auto + assignation auto │
+│ ✅ Vérifier dans LDAP et Odoo                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+  PRÉREQUIS AVANT ENREGISTREMENT
+═══════════════════════════════════════════════════════════════════
+
+☑ Odoo accessible (http://localhost:8069)
+☑ MidPoint accessible (http://localhost:8080/midpoint)
+☑ OpenLDAP accessible
+☑ Scripts Python testés et fonctionnels
+☑ Rôle Employee importé dans MidPoint
+☑ Object template avec règle auto activée
+☑ Ressources LDAP Groups et Odoo testées
+☑ Groupes LDAP créés (Employee, Internet, Printer, SharePoint)
+☑ Tâche de synchronisation configurée
+
+═══════════════════════════════════════════════════════════════════
+  COMMANDES RAPIDES
+═══════════════════════════════════════════════════════════════════
+
+# Export Odoo → CSV
+cd /root/iam-iga-tp
+python3 scripts/export_odoo_hr.py
+
+# Synchronisation Odoo → MidPoint
+python3 scripts/sync_odoo_to_midpoint.py
+
+# Vérifier LDAP
+docker exec -it openldap ldapsearch -x -H ldap://localhost \
+  -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin \
+  "cn=alice.doe"
+
+# Vérifier utilisateurs MidPoint
+curl -s -k -u administrator:5ecr3t \
+  "http://localhost:8080/midpoint/ws/rest/users" \
+  -H "Accept: application/xml" | grep -oP '<name>[^<]+</name>'
+
+═══════════════════════════════════════════════════════════════════
+  CONSEILS ENREGISTREMENT
+═══════════════════════════════════════════════════════════════════
+
+🎥 Parler lentement et expliquer chaque action
+🔍 Zoomer sur les éléments importants (Ctrl+Molette)
+⏸️  Faire des pauses de 2-3 secondes après actions importantes
+📝 Préparer les commandes dans le terminal avant
+🎬 Filmer en 1080p, 30fps
+🎤 Utiliser un micro-casque pour audio clair
+
+═══════════════════════════════════════════════════════════════════
