@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<role oid="12345678-d34d-b33f-f00d-987987987997"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>App_Write</name>
+    <displayName>Application Write Permission</displayName>
+    <description>Droit d'écriture sur l'application métier PostgreSQL</description>
+
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d84"/>
+            <kind>entitlement</kind>
+            <intent>permission</intent>
+            <attribute>
+                <ref>ri:permission_name</ref>
+                <outbound>
+                    <expression>
+                        <value>app_write</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+
+</role>

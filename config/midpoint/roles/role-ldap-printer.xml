@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<role oid="12345678-d34d-b33f-f00d-987987987994"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>LDAP_Printer</name>
+    <displayName>LDAP Printer Group</displayName>
+    <description>Groupe LDAP Printer géré par MidPoint</description>
+
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7e"/>
+            <kind>entitlement</kind>
+            <intent>group</intent>
+            <attribute>
+                <ref>ri:cn</ref>
+                <outbound>
+                    <expression>
+                        <value>Printer</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+
+</role>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<role oid="12345678-d34d-b33f-f00d-987987987993"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>LDAP_Internet</name>
+    <displayName>LDAP Internet Group</displayName>
+    <description>Groupe LDAP Internet géré par MidPoint</description>
+
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7e"/>
+            <kind>entitlement</kind>
+            <intent>group</intent>
+            <attribute>
+                <ref>ri:cn</ref>
+                <outbound>
+                    <expression>
+                        <value>Internet</value>
+                    </expression>
+                </outbound>
+            </attribute>
+        </construction>
+    </inducement>
+
+</role>

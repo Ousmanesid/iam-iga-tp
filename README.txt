@@ -43,19 +43,26 @@ RESSOURCES CONFIGURÉES (MidPoint)
 RESSOURCE 1 : Apache DS/LDAP / Active Directory
 -----------------------------------------------
 Connecteur : LDAP (com.evolveum.polygon.connector.ldap.LdapConnector)
-Fichier    : config/midpoint/resources/resource-ldap.xml
+Fichiers   : config/midpoint/resources/resource-ldap.xml (comptes utilisateurs)
+             config/midpoint/resources/resource-ldap-groups.xml (groupes)
 
 Groupes gérés par MidPoint :
   - Employee                       (tous les employés)
   - Internet                       (accès Internet autorisé)
   - Printer                        (accès imprimantes)
   - Public_Share_Folder_SharePoint (partage SharePoint)
-  - crm-agents, rh-team, it-team, compta-team, marketing-team
+
+Rôles MidPoint correspondants :
+  - LDAP_Employee (OID: 12345678-d34d-b33f-f00d-987987987992)
+  - LDAP_Internet (OID: 12345678-d34d-b33f-f00d-987987987993)
+  - LDAP_Printer (OID: 12345678-d34d-b33f-f00d-987987987994)
+  - LDAP_Public_Share_Folder_SharePoint (OID: 12345678-d34d-b33f-f00d-987987987995)
 
 RESSOURCE 2 : Odoo ERP
 ----------------------
-Connecteur : PostgreSQL (accès direct base Odoo)
-Fichiers   : config/midpoint/resources/resource-odoo.xml
+Connecteur : REST Connector (API RPC Odoo) - Note: nécessite connecteur customisé
+Fichiers   : config/midpoint/resources/resource-odoo-rpc.xml (API RPC)
+             config/midpoint/resources/resource-odoo.xml (PostgreSQL direct - alternatif)
              config/midpoint/resources/resource-odoo-hr.xml (source HR)
 
 Rôles applicatifs :
@@ -63,28 +70,38 @@ Rôles applicatifs :
   - Odoo_Finance : Accès module Finance
   - Odoo_Admin   : Administrateur (DROIT CRITIQUE - nécessite approbation)
 
-Note: Le connecteur utilise PostgreSQL direct plutôt que l'API RPC Odoo
-      pour une meilleure performance et compatibilité avec MidPoint.
+Note: L'API RPC Odoo nécessite un connecteur customisé. En attendant,
+      on peut utiliser resource-odoo.xml (PostgreSQL direct) comme alternative.
 
-RESSOURCE 3 : Application Métier (PostgreSQL) - Home App
+RESSOURCE 3 : Application Métier (PostgreSQL)
 --------------------------------------------------------
 Connecteur : DatabaseTable (org.identityconnectors.databasetable)
-Fichier    : config/midpoint/resources/resource-homeapp-postgresql.xml
+Fichier    : config/midpoint/resources/resource-postgresql-app.xml
 
 Droits base de données :
   - app_read     : Lecture seule
   - app_write    : Lecture/écriture
   - app_admin_db : Administration BDD (DROIT CRITIQUE)
 
-RESSOURCE 4 : Application Multi-base (À FAIRE)
-----------------------------------------------
-Connecteur : Customisé (LDAP + PostgreSQL + NoSQL)
+Rôles MidPoint correspondants :
+  - App_Read (OID: 12345678-d34d-b33f-f00d-987987987996)
+  - App_Write (OID: 12345678-d34d-b33f-f00d-987987997)
+  - App_Admin_DB (OID: 12345678-d34d-b33f-f00d-987987987998)
 
-Composants prévus :
+RESSOURCE 4 : Application Multi-base
+----------------------------------------------
+Connecteur : Multi-Base Connector (customisé - À DÉVELOPPER)
+Fichier    : config/midpoint/resources/resource-multibase-app.xml
+
+Composants :
   - LDAP : Groupes AppBiz_CustomGR_User, AppBiz_CustomGR2_Manager,
            AppBiz_CustomGR2_Admin, AppBiz_CustomGR2_Audit
   - PostgreSQL : Tables users, profiles, user_profile_id_permissions
-  - NoSQL : Supabase/Firebase (collection users)
+                 (Schéma: config/postgresql/appbiz-schema.sql)
+  - NoSQL : Supabase/Firebase (collection users avec structure JSON)
+
+Note: Cette ressource nécessite un connecteur customisé qui gère
+      simultanément LDAP, PostgreSQL et NoSQL.
 
 ================================================================================
 ARCHITECTURE DU PROJET
@@ -190,16 +207,23 @@ CONFIGURATION MIDPOINT
 
 ÉTAPE 1 : Importer les ressources
 ----------------------------------
+Option A - Via script automatique (recommandé) :
+   ./scripts/import-midpoint-resources.sh
+
+Option B - Via interface MidPoint :
 1. Se connecter à MidPoint (administrator / 5ecr3t)
 2. Aller dans Configuration > Repository objects > Import object
 3. Importer les fichiers dans cet ordre :
 
-   a) config/midpoint/resources/resource-ldap.xml        (Ressource 1: LDAP)
-   b) config/midpoint/resources/resource-odoo.xml        (Ressource 2: Odoo)
-   c) config/midpoint/resources/resource-odoo-hr.xml     (Source HR Odoo)
-   d) config/midpoint/resources/resource-homeapp-postgresql.xml (Ressource 3)
-   e) config/midpoint/resources/resource-hr-csv.xml      (Source CSV - optionnel)
-   f) config/midpoint/resources/resource-intranet-csv.xml (Cible Intranet)
+   a) config/midpoint/resources/resource-ldap.xml        (Ressource 1: LDAP comptes)
+   b) config/midpoint/resources/resource-ldap-groups.xml (Ressource 1: LDAP groupes)
+   c) config/midpoint/resources/resource-odoo-rpc.xml    (Ressource 2: Odoo RPC)
+   d) config/midpoint/resources/resource-odoo.xml        (Ressource 2: Odoo PostgreSQL - alternatif)
+   e) config/midpoint/resources/resource-odoo-hr.xml     (Source HR Odoo)
+   f) config/midpoint/resources/resource-postgresql-app.xml (Ressource 3: PostgreSQL App)
+   g) config/midpoint/resources/resource-multibase-app.xml  (Ressource 4: Multi-base)
+   h) config/midpoint/resources/resource-hr-csv.xml      (Source CSV - optionnel)
+   i) config/midpoint/resources/resource-intranet-csv.xml (Cible Intranet)
 
 4. Pour chaque ressource :
    - Resources > [Nom de la ressource] > Test connection
@@ -210,21 +234,32 @@ CONFIGURATION MIDPOINT
 1. Configuration > Repository objects > Import object
 2. Importer tous les rôles :
 
+   Rôles LDAP (Ressource 1):
+   a) config/midpoint/roles/role-ldap-employee.xml
+   b) config/midpoint/roles/role-ldap-internet.xml
+   c) config/midpoint/roles/role-ldap-printer.xml
+   d) config/midpoint/roles/role-ldap-sharepoint.xml
+
    Rôles Odoo (Ressource 2):
-   a) config/midpoint/roles/role-odoo-user.xml
-   b) config/midpoint/roles/role-odoo-finance.xml
-   c) config/midpoint/roles/role-odoo-admin.xml          [CRITIQUE]
+   e) config/midpoint/roles/role-odoo-user.xml
+   f) config/midpoint/roles/role-odoo-finance.xml
+   g) config/midpoint/roles/role-odoo-admin.xml          [CRITIQUE]
 
-   Rôles Home App (Ressource 3):
-   d) config/midpoint/roles/role-homeapp-user.xml
-   e) config/midpoint/roles/role-homeapp-commercial.xml
-   f) config/midpoint/roles/role-homeapp-admin.xml       [CRITIQUE]
+   Rôles PostgreSQL App (Ressource 3):
+   h) config/midpoint/roles/role-app-read.xml
+   i) config/midpoint/roles/role-app-write.xml
+   j) config/midpoint/roles/role-app-admin-db.xml        [CRITIQUE]
 
-   Autres rôles:
-   g) config/midpoint/roles/role-agent-commercial.xml    (ABAC)
-   h) config/midpoint/roles/role-comptable.xml
-   i) config/midpoint/roles/role-it-admin.xml
-   j) config/midpoint/roles/role-rh-manager.xml
+   Rôles Home App (optionnel):
+   k) config/midpoint/roles/role-homeapp-user.xml
+   l) config/midpoint/roles/role-homeapp-commercial.xml
+   m) config/midpoint/roles/role-homeapp-admin.xml       [CRITIQUE]
+
+   Autres rôles métier:
+   n) config/midpoint/roles/role-agent-commercial.xml    (ABAC)
+   o) config/midpoint/roles/role-comptable.xml
+   p) config/midpoint/roles/role-it-admin.xml
+   q) config/midpoint/roles/role-rh-manager.xml
 
 ÉTAPE 3 : Importer les tâches
 ------------------------------

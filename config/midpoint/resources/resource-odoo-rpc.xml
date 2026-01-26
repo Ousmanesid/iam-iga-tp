@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Odoo ERP via API RPC
+  Cette ressource utilise l'API RPC d'Odoo pour le provisioning.
+  Rôles applicatifs gérés :
+  - Odoo_User
+  - Odoo_Finance
+  - Odoo_Admin (Droit critique)
+  
+  Note: MidPoint ne supporte pas nativement l'API RPC Odoo.
+  Cette configuration utilise un connecteur Scripted ou REST.
+  Pour une implémentation complète, un connecteur customisé serait nécessaire.
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d83"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo ERP (RPC API)</name>
+    <description>Odoo ERP via API RPC XML-RPC/JSON-RPC pour provisioning des utilisateurs et rôles</description>
+
+    <!-- 
+      Note: Pour utiliser l'API RPC Odoo, il faudrait un connecteur customisé.
+      En attendant, on utilise le connecteur REST générique ou Scripted.
+      Pour une implémentation complète, créer un connecteur ICF customisé.
+    -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <!-- Utilisation d'un connecteur REST générique ou Scripted -->
+                <q:value>com.evolveum.polygon.connector.rest.RestConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcrest="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-rest/com.evolveum.polygon.connector.rest.RestConnector">
+        <icfc:configurationProperties>
+            <!-- URL de base Odoo -->
+            <icfcrest:baseUrl>http://odoo:8069</icfcrest:baseUrl>
+            
+            <!-- Authentification -->
+            <icfcrest:username>admin</icfcrest:username>
+            <icfcrest:password>
+                <t:clearValue>admin</t:clearValue>
+            </icfcrest:password>
+            
+            <!-- Configuration pour API RPC Odoo -->
+            <icfcrest:authenticationMethod>basic</icfcrest:authenticationMethod>
+            
+            <!-- Endpoints RPC -->
+            <icfcrest:endpointPath>/xmlrpc/2/object</icfcrest:endpointPath>
+            
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Odoo User Account</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- Login Odoo -->
+            <attribute>
+                <ref>ri:login</ref>
+                <displayName>Odoo Login</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                
+                                if (!firstName || !lastName) {
+                                    return null
+                                }
+                                
+                                return firstName + '.' + lastName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Email -->
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Nom complet -->
+            <attribute>
+                <ref>ri:name</ref>
+                <displayName>Full Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>return givenName + ' ' + familyName</code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Association aux rôles Odoo (groups_id) -->
+            <association>
+                <ref>ri:groups_id</ref>
+                <displayName>Odoo Groups/Roles</displayName>
+                <kind>entitlement</kind>
+                <intent>role</intent>
+                <direction>subjectToObject</direction>
+                <associationAttribute>ri:groups_id</associationAttribute>
+                <valueAttribute>ri:id</valueAttribute>
+            </association>
+
+        </objectType>
+
+        <!-- Configuration pour les rôles Odoo (entitlements) -->
+        <objectType>
+            <kind>entitlement</kind>
+            <intent>role</intent>
+            <displayName>Odoo Role</displayName>
+            <objectClass>ri:GroupObjectClass</objectClass>
+            
+            <attribute>
+                <ref>ri:id</ref>
+                <displayName>Role ID</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>ri:name</ref>
+                <displayName>Role Name</displayName>
+            </attribute>
+            
+        </objectType>
+    </schemaHandling>
+
+</resource>

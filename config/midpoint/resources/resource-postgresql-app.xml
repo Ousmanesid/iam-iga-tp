@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Application métier PostgreSQL
+  Cette ressource nécessite un connecteur SQL pour gérer les droits base de données.
+  Droits gérés :
+  - app_read
+  - app_write
+  - app_admin_db (droit critique)
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d84"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Application Métier PostgreSQL</name>
+    <description>Application métier PostgreSQL avec gestion des droits : app_read, app_write, app_admin_db</description>
+
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>org.identityconnectors.databasetable.DatabaseTableConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcdbtable="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-databasetable/org.identityconnectors.databasetable.DatabaseTableConnector">
+        <icfc:configurationProperties>
+            <!-- Configuration JDBC PostgreSQL -->
+            <icfcdbtable:host>intranet-db</icfcdbtable:host>
+            <icfcdbtable:port>5432</icfcdbtable:port>
+            <icfcdbtable:database>intranet</icfcdbtable:database>
+            <icfcdbtable:user>intranet</icfcdbtable:user>
+            <icfcdbtable:password>
+                <t:clearValue>intranet123</t:clearValue>
+            </icfcdbtable:password>
+            
+            <!-- Table des utilisateurs -->
+            <icfcdbtable:table>app_users</icfcdbtable:table>
+            <icfcdbtable:keyColumn>id</icfcdbtable:keyColumn>
+            
+            <!-- Driver JDBC PostgreSQL -->
+            <icfcdbtable:jdbcDriver>org.postgresql.Driver</icfcdbtable:jdbcDriver>
+            <icfcdbtable:jdbcUrlTemplate>jdbc:postgresql://%h:%p/%d</icfcdbtable:jdbcUrlTemplate>
+            
+            <icfcdbtable:enableEmptyString>false</icfcdbtable:enableEmptyString>
+            <icfcdbtable:quoting>DOUBLE</icfcdbtable:quoting>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>App User Account</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <!-- Username -->
+            <attribute>
+                <ref>ri:username</ref>
+                <displayName>Username</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
+                                
+                                if (!firstName || !lastName) {
+                                    return null
+                                }
+                                
+                                return firstName + '.' + lastName
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Email -->
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- First Name -->
+            <attribute>
+                <ref>ri:first_name</ref>
+                <displayName>First Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Last Name -->
+            <attribute>
+                <ref>ri:last_name</ref>
+                <displayName>Last Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Association aux permissions/rôles DB -->
+            <association>
+                <ref>ri:permissions</ref>
+                <displayName>Database Permissions</displayName>
+                <kind>entitlement</kind>
+                <intent>permission</intent>
+                <direction>subjectToObject</direction>
+                <associationAttribute>ri:permissions</associationAttribute>
+                <valueAttribute>ri:permission_name</valueAttribute>
+            </association>
+
+        </objectType>
+
+        <!-- Configuration pour les permissions DB (entitlements) -->
+        <objectType>
+            <kind>entitlement</kind>
+            <intent>permission</intent>
+            <displayName>Database Permission</displayName>
+            <objectClass>ri:PermissionObjectClass</objectClass>
+            
+            <attribute>
+                <ref>ri:permission_name</ref>
+                <displayName>Permission Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$focus/name</path>
+                    </source>
+                </outbound>
+            </attribute>
+            
+        </objectType>
+    </schemaHandling>
+
+</resource>
