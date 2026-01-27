@@ -1,0 +1,16 @@
+personalNumber,givenName,familyName,email,department,title,status
+1001,Jean,Dupont,jean.dupont@example.com,Commercial,Agent Commercial Senior,Active
+1002,Marie,Martin,marie.martin@example.com,Ressources Humaines,Responsable RH,Active
+1003,Pierre,Bernard,pierre.bernard@example.com,Commercial,Agent Commercial,Active
+1004,Sophie,Dubois,sophie.dubois@example.com,Informatique,Développeur Senior,Active
+1005,Luc,Thomas,luc.thomas@example.com,Comptabilité,Comptable,Active
+1006,Claire,Robert,claire.robert@example.com,Commercial,Manager Commercial,Active
+1007,Antoine,Richard,antoine.richard@example.com,Marketing,Chargé de Communication,Active
+1008,Emma,Petit,emma.petit@example.com,Informatique,Chef de Projet IT,Active
+1009,Lucas,Durand,lucas.durand@example.com,Commercial,Agent Commercial,Active
+1010,Camille,Leroy,camille.leroy@example.com,Ressources Humaines,Assistant RH,Active
+1011,Hugo,Moreau,hugo.moreau@example.com,Informatique,Développeur,Active
+1012,Léa,Simon,lea.simon@example.com,Commercial,Agent Commercial,Suspended
+1013,Noah,Laurent,noah.laurent@example.com,Comptabilité,Assistant Comptable,Active
+1014,Chloé,Lefebvre,chloe.lefebvre@example.com,Marketing,Responsable Marketing,Active
+1015,Gabriel,Michel,gabriel.michel@example.com,Commercial,Agent Commercial Junior,Active

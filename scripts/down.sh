@@ -5,7 +5,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 echo ""
-echo "🛑 Arrêt de la stack IGA..."
+echo "🛑 Arrêt de la stack IGA (MidPoint + Odoo + OpenLDAP + N8N + Gateway + Intranet)..."
 echo ""
 
 cd "$PROJECT_ROOT/docker"
@@ -21,19 +21,17 @@ else
     DOCKER_COMPOSE="docker-compose"
 fi
 
-# Arrêter le conteneur intranet-app s'il a été lancé manuellement
-if docker ps -q -f name=intranet-app &> /dev/null; then
-    echo "  → Arrêt de intranet-app..."
-    docker stop intranet-app 2>/dev/null || true
-    docker rm intranet-app 2>/dev/null || true
-fi
+# Arrêter les conteneurs potentiellement lancés manuellement
+echo "  → Nettoyage des conteneurs orphelins..."
+docker stop gateway intranet-app 2>/dev/null || true
+docker rm gateway intranet-app 2>/dev/null || true
 
 # Arrêt des conteneurs docker-compose
 echo "  → Arrêt des services Docker Compose..."
 $DOCKER_COMPOSE down 2>/dev/null || true
 
-# Nettoyer le réseau si nécessaire
-docker network rm iam_net 2>/dev/null || true
+# Nettoyer les réseaux si nécessaire
+docker network rm docker_net 2>/dev/null || true
 
 echo ""
 echo "✅ Stack arrêtée avec succès"

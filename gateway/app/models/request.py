@@ -50,7 +50,7 @@ class PreProvisionRequest(BaseModel):
     requester_login: Optional[str] = None
     requester_name: Optional[str] = None
     justification: Optional[str] = None
-    target_system: str = "homeapp"  # homeapp, ldap, odoo, supabase
+    target_system: str = "midpoint"  # midpoint, ldap, odoo
     midpoint_oid: Optional[str] = None
     requires_approval: bool = False
     approval_levels: List[ApprovalLevel] = Field(default_factory=list)

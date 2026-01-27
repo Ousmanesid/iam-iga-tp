@@ -14,7 +14,7 @@
   - Printer (accès imprimantes)
   - Public_Share_Folder_SharePoint (partage SharePoint)
 -->
-<role oid="00000000-0000-0000-0000-000000000004"
+<role oid="00000000-0000-0000-0000-000000000104"
       xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
       xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
       xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"

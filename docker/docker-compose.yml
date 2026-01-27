@@ -1,6 +1,7 @@
 version: "3.3"
 
 services:
+  # === PostgreSQL pour MidPoint ===
   midpoint_data:
     image: postgres:16-alpine
     environment:
@@ -11,7 +12,13 @@ services:
      - net
     volumes:
      - midpoint_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U midpoint"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # === Initialisation MidPoint ===
   data_init:
     image: evolveum/midpoint:${MP_VER:-latest}-alpine
     command: >
@@ -27,7 +34,8 @@ services:
       echo -e '\\n Repository init is not needed...' ;
       "
     depends_on:
-     - midpoint_data
+      midpoint_data:
+        condition: service_healthy
     environment:
      - MP_SET_midpoint_repository_jdbcUsername=midpoint
      - MP_SET_midpoint_repository_jdbcPassword=db.secret.pw.007
@@ -42,13 +50,15 @@ services:
     volumes:
      - midpoint_home:/opt/midpoint/var
 
+  # === MidPoint Server ===
   midpoint_server:
     image: evolveum/midpoint:${MP_VER:-latest}-alpine
+    container_name: midpoint
     depends_on:
       data_init:
         condition: service_completed_successfully
       midpoint_data:
-        condition: service_started
+        condition: service_healthy
     command: [ "/opt/midpoint/bin/midpoint.sh", "container" ]
     ports:
       - 8080:8080
@@ -64,6 +74,185 @@ services:
      - net
     volumes:
      - midpoint_home:/opt/midpoint/var
+     - ../data:/data
+     - ../config/midpoint:/opt/midpoint/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/midpoint/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # === OpenLDAP ===
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    environment:
+      - LDAP_ORGANISATION=Example Inc
+      - LDAP_DOMAIN=example.com
+      - LDAP_ADMIN_PASSWORD=admin
+      - LDAP_CONFIG_PASSWORD=config
+      - LDAP_READONLY_USER=false
+      - LDAP_RFC2307BIS_SCHEMA=true
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=true
+    ports:
+      - "10389:389"
+      - "10636:636"
+    networks:
+      - net
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      - ../config/ldap/bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/bootstrap.ldif
+    command: --copy-service --loglevel debug
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=example,dc=com", "-D", "cn=admin,dc=example,dc=com", "-w", "admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === PostgreSQL pour Odoo ===
+  odoo-db:
+    image: postgres:15-alpine
+    container_name: odoo-db
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+    networks:
+      - net
+    volumes:
+      - odoo_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Odoo ERP ===
+  odoo:
+    image: odoo:17.0
+    container_name: odoo
+    depends_on:
+      odoo-db:
+        condition: service_healthy
+    environment:
+      - HOST=odoo-db
+      - USER=odoo
+      - PASSWORD=odoo
+    ports:
+      - "8069:8069"
+    networks:
+      - net
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/web/database/manager"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # === PostgreSQL pour Intranet ===
+  intranet-db:
+    image: postgres:15-alpine
+    container_name: intranet-db
+    environment:
+      - POSTGRES_DB=intranet
+      - POSTGRES_USER=intranet
+      - POSTGRES_PASSWORD=intranet123
+    networks:
+      - net
+    volumes:
+      - intranet_db_data:/var/lib/postgresql/data
+      - ../config/intranet/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intranet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Application Intranet (PHP) ===
+  intranet-app:
+    build:
+      context: ../app/intranet
+      dockerfile: Dockerfile
+    container_name: intranet-app
+    depends_on:
+      intranet-db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=intranet-db
+      - DB_NAME=intranet
+      - DB_USER=intranet
+      - DB_PASSWORD=intranet123
+    ports:
+      - "8090:80"
+    networks:
+      - net
+    volumes:
+      - ../app/intranet:/var/www/html
+
+  # === N8N Workflow Automation ===
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://n8n:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+    ports:
+      - "5678:5678"
+    networks:
+      - net
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../config/n8n/workflows:/workflows
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # === Gateway FastAPI ===
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    depends_on:
+      midpoint_server:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+    environment:
+      - MIDPOINT_URL=http://midpoint:8080/midpoint
+      - MIDPOINT_USER=administrator
+      - MIDPOINT_PASSWORD=Test5ecr3t
+      - N8N_URL=http://n8n:5678
+      - N8N_USER=admin
+      - N8N_PASSWORD=admin123
+      - APP_PORT=8000
+      - APP_ENV=development
+    ports:
+      - "8000:8000"
+    networks:
+      - net
+    volumes:
+      - ../gateway:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   net:
@@ -72,3 +261,10 @@ networks:
 volumes:
   midpoint_data:
   midpoint_home:
+  ldap_data:
+  ldap_config:
+  odoo_db_data:
+  odoo_data:
+  odoo_addons:
+  intranet_db_data:
+  n8n_data:

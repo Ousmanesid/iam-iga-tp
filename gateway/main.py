@@ -12,7 +12,6 @@ import logging
 from datetime import datetime
 
 from app.config import settings
-from app.services.homeapp_db import homeapp_db
 from app.services.n8n import n8n_service
 from app.services.midpoint import midpoint_service
 from app.services.llm import llm_service
@@ -47,18 +46,10 @@ async def lifespan(app: FastAPI):
     # Démarrage
     logger.info("Starting Gateway IAM", env=settings.app_env, debug=settings.app_debug)
     
-    # Connexion à la base de données Home App
-    try:
-        await homeapp_db.connect()
-        logger.info("Connected to HomeApp database")
-    except Exception as e:
-        logger.error("Failed to connect to HomeApp database", error=str(e))
-    
     yield
     
     # Arrêt
     logger.info("Shutting down Gateway IAM")
-    await homeapp_db.disconnect()
 
 
 # Création de l'application FastAPI
@@ -150,14 +141,6 @@ async def health_check():
         "services": {}
     }
     
-    # Vérifier Home App DB
-    try:
-        await homeapp_db.ensure_connected()
-        health["services"]["homeapp_db"] = {"status": "up"}
-    except Exception as e:
-        health["services"]["homeapp_db"] = {"status": "down", "error": str(e)}
-        health["status"] = "degraded"
-    
     # Vérifier N8N
     try:
         n8n_healthy = await n8n_service.health_check()
@@ -203,11 +186,9 @@ async def get_config():
     
     return {
         "app_env": settings.app_env,
-        "homeapp_db_host": settings.homeapp_db_host,
         "midpoint_url": settings.midpoint_url,
         "n8n_url": settings.n8n_url,
-        "llm_provider": settings.llm_provider,
-        "supabase_enabled": settings.supabase_enabled
+        "llm_provider": settings.llm_provider
     }
 
 
