@@ -39,8 +39,12 @@
             </icfcdbtable:password>
             
             <!-- Configuration de la table -->
-            <icfcdbtable:table>res_users</icfcdbtable:table>
+            <icfcdbtable:table>midpoint_users_view</icfcdbtable:table>
             <icfcdbtable:keyColumn>id</icfcdbtable:keyColumn>
+            <icfcdbtable:changeLogColumn>write_date</icfcdbtable:changeLogColumn>
+            
+            <!-- Colonnes à gérer -->
+            <icfcdbtable:allNative>false</icfcdbtable:allNative>
             
             <!-- Driver JDBC PostgreSQL -->
             <icfcdbtable:jdbcDriver>org.postgresql.Driver</icfcdbtable:jdbcDriver>
@@ -73,9 +77,9 @@
                 </limitations>
             </attribute>
 
-            <!-- Mapping: Login -->
+            <!-- Mapping: icfs:name (identifiant principal = id) -->
             <attribute>
-                <ref>ri:login</ref>
+                <ref>icfs:name</ref>
                 <displayName>Login</displayName>
                 <outbound>
                     <strength>strong</strength>
@@ -87,18 +91,53 @@
                     </source>
                     <expression>
                         <script>
-                            <code>
-                                String firstName = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
-                                String lastName = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', '')
-                                
-                                if (!firstName || !lastName) {
-                                    return null
-                                }
-                                
-                                return firstName + '.' + lastName
-                            </code>
+                            <code>def first = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); def last = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); return (first &amp;&amp; last) ? first + '.' + last : null</code>
                         </script>
                     </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: Login (colonne login dans res_users) -->
+            <attribute>
+                <ref>ri:login</ref>
+                <displayName>Login Column</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>def first = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); def last = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); return (first &amp;&amp; last) ? first + '.' + last : null</code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: Email (écrit dans res_partner via la vue) -->
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <!-- Mapping: Partner Name (nom complet pour res_partner) -->
+            <attribute>
+                <ref>ri:partner_name</ref>
+                <displayName>Partner Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/fullName</path>
+                    </source>
                 </outbound>
             </attribute>
 
@@ -114,7 +153,65 @@
                 </outbound>
             </attribute>
 
+            <!-- Note: company_id, partner_id, notification_type et groups_id sont gérés automatiquement
+                 par les triggers PostgreSQL INSTEAD OF sur la vue midpoint_users_view
+                 L'email et le nom sont maintenant gérés directement par MidPoint via la vue -->
+
+            <activation>
+                <administrativeStatus>
+                    <outbound>
+                        <strength>strong</strength>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    return ActivationStatusType.ENABLED
+                                </code>
+                            </script>
+                        </expression>
+                    </outbound>
+                </administrativeStatus>
+            </activation>
+
         </objectType>
     </schemaHandling>
+
+    <synchronization>
+        <objectSynchronization>
+            <kind>account</kind>
+            <intent>default</intent>
+            <enabled>true</enabled>
+            <correlation>
+                <q:equal>
+                    <q:path>name</q:path>
+                    <expression>
+                        <path>$account/attributes/icfs:name</path>
+                    </expression>
+                </q:equal>
+            </correlation>
+            
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            <reaction>
+                <situation>deleted</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unlinked</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unmatched</situation>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
 
 </resource>

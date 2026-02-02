@@ -42,11 +42,12 @@ Importer dans cet ordre :
 
 1. `object-template-user.xml` ⭐ (Auto-assignment des rôles)
 
-### 4️⃣ TÂCHES (2 fichiers)
+### 4️⃣ TÂCHES (1 fichier)
 📁 Dossier: `/root/iam-iga-tp/config/midpoint/tasks/`
 
-1. `task-hr-import.xml` (Import depuis HR CSV)
-2. `task-odoo-hr-sync.xml` (Synchronisation Odoo HR)
+1. `task-hr-import.xml` (Import depuis HR CSV - hr_raw.csv)
+
+⚠️ **Note:** La task `task-odoo-hr-sync.xml` a été supprimée car elle était obsolète (référençait une ressource inexistante).
 
 ---
 
@@ -119,11 +120,11 @@ Importer dans cet ordre :
 
 ## 📊 COMPTEUR D'IMPORTS
 
-Total à importer : **20 objets**
+Total à importer : **19 objets**
 - ⬜ 6 Ressources
 - ⬜ 11 Rôles  
 - ⬜ 1 Object Template
-- ⬜ 2 Tâches
+- ⬜ 1 Tâche
 
 ---
 
@@ -147,7 +148,42 @@ Total à importer : **20 objets**
 
 Une fois tous les objets importés :
 
-1. **Tester le provisioning** :
+### 1. **Import des employés via script Python** (recommandé)
+
+```bash
+cd /srv/projet/iam-iga-tp/scripts
+
+# Test en mode simulation
+python3 import_hr_csv.py --dry-run
+
+# Import réel des 15 employés depuis hr_raw.csv
+python3 import_hr_csv.py
+```
+
+Ce script:
+- ✅ Lit le fichier `/data/hr/hr_raw.csv` (15 employés)
+- ✅ Crée les utilisateurs dans MidPoint via l'API REST
+- ✅ Force le recompute pour appliquer les rôles automatiques
+- ✅ Affiche les statistiques détaillées
+
+### 2. **Ou déclencher la task MidPoint manuellement**
+
+```bash
+cd /srv/projet/iam-iga-tp/scripts
+
+# Déclencher la task et attendre le résultat
+python3 trigger_import_task.py --wait
+```
+
+### 3. **Vérifier les utilisateurs créés**
+
+Dans MidPoint UI:
+- Menu **Users** → **All users**
+- Vérifier que les 15 employés sont créés
+- Cliquer sur un utilisateur → Onglet **Assignments**
+- Vérifier les rôles auto-assignés selon le département
+
+📁 **Voir `/srv/projet/iam-iga-tp/scripts/README.md` pour la documentation complète des scripts**
    - Créer un utilisateur test
    - Lui assigner le rôle "Employee"
    - Vérifier qu'il apparaît dans LDAP

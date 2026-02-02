@@ -1,12 +1,6 @@
-# Gateway IAM - Routers Package
-from .provision import router as provision_router
-from .workflow import router as workflow_router
-from .chatbot import router as chatbot_router
+"""
+Routers Aegis Gateway
+"""
+from . import sync, health
 
-
-
-
-
-
-
-
+__all__ = ["sync", "health"]

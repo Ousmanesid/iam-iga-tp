@@ -1,0 +1,127 @@
+# Python# Byte-compiled / optimized / DLL files
+
+__pycache__/__pycache__/
+
+*.py[cod]*.py[cod]
+
+*$py.class*$py.class
+
+*.so
+
+.Python# C extensions
+
+venv/*.so
+
+env/
+
+ENV/# Distribution / packaging
+
+*.egg-info/.Python
+
+dist/build/
+
+build/develop-eggs/
+
+dist/
+
+# Databasedownloads/
+
+*.dbeggs/
+
+*.sqlite.eggs/
+
+*.sqlite3lib/
+
+lib64/
+
+# Environment Variablesparts/
+
+.envsdist/
+
+.env.localvar/
+
+.env.productionwheels/
+
+*.egg-info/
+
+# Logs.installed.cfg
+
+*.log*.egg
+
+logs/
+
+/tmp/*.log# PyInstaller
+
+*.manifest
+
+# IDEs*.spec
+
+.vscode/
+
+.idea/# Installer logs
+
+*.swppip-log.txt
+
+*.swopip-delete-this-directory.txt
+
+*~
+
+# Unit test / coverage reports
+
+# Frontendhtmlcov/
+
+frontend/node_modules/.tox/
+
+frontend/dist/.nox/
+
+frontend/.vite/.coverage
+
+frontend/.env.coverage.*
+
+.cache
+
+# OSnosetests.xml
+
+.DS_Storecoverage.xml
+
+Thumbs.db*.cover
+
+*.py,cover
+
+# Secrets (IMPORTANT).hypothesis/
+
+secrets/.pytest_cache/
+
+*.pem
+
+*.key# Translations
+
+config/credentials.json*.mo
+
+*.pot
+
+# Environments
+.env
+.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+*.sqlite3
+*.db

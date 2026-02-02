@@ -37,6 +37,19 @@
     <riskLevel>low</riskLevel>
 
     <!-- ============================================================ -->
+    <!-- AUTO-ASSIGNATION AUTOMATIQUE -->
+    <!-- Ce rôle est automatiquement assigné à tous les utilisateurs -->
+    <!-- ============================================================ -->
+    <autoassign>
+        <enabled>true</enabled>
+        <focus>
+            <selector>
+                <type>UserType</type>
+            </selector>
+        </focus>
+    </autoassign>
+
+    <!-- ============================================================ -->
     <!-- INDUCEMENT 1: Compte LDAP (base) -->
     <!-- ============================================================ -->
     <inducement>
@@ -101,3 +114,4 @@
     </inducement>
 
 </role>
+    

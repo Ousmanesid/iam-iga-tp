@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7c"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:icfccsv="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-csv/com.evolveum.polygon.connector.csv.CsvConnector"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>HR CSV Source</name>
+    <description>Source CSV des données RH exportées depuis Odoo</description>
+
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>com.evolveum.polygon.connector.csv.CsvConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration>
+        <icfc:configurationProperties>
+            <icfccsv:filePath>/data/hr/hr_clean.csv</icfccsv:filePath>
+            <icfccsv:encoding>UTF-8</icfccsv:encoding>
+            <icfccsv:fieldDelimiter>,</icfccsv:fieldDelimiter>
+            <icfccsv:uniqueAttribute>personalNumber</icfccsv:uniqueAttribute>
+            <icfccsv:nameAttribute>personalNumber</icfccsv:nameAttribute>
+            <icfccsv:readOnly>true</icfccsv:readOnly>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>HR Employee</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+            
+            <attribute>
+                <ref>ri:personalNumber</ref>
+                <displayName>Personal Number</displayName>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>personalNumber</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:givenName</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>givenName</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:familyName</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>familyName</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:email</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>emailAddress</path>
+                    </target>
+                </inbound>
+                <inbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>basic.stringify(input)?.contains('@') ? basic.stringify(input).split('@')[0] : ('user.' + basic.stringify(personalNumber))</code>
+                        </script>
+                    </expression>
+                    <target>
+                        <path>name</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:department</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>organization</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:title</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <target>
+                        <path>title</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:status</ref>
+                <inbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>basic.stringify(input)?.toLowerCase() == 'active' ? com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType.ENABLED : com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType.DISABLED</code>
+                        </script>
+                    </expression>
+                    <target>
+                        <path>activation/administrativeStatus</path>
+                    </target>
+                </inbound>
+            </attribute>
+
+            <activation>
+                <administrativeStatus>
+                    <inbound/>
+                </administrativeStatus>
+            </activation>
+        </objectType>
+    </schemaHandling>
+
+    <synchronization>
+        <objectSynchronization>
+            <objectClass>ri:AccountObjectClass</objectClass>
+            <kind>account</kind>
+            <intent>default</intent>
+            <enabled>true</enabled>
+            <correlation>
+                <q:equal>
+                    <q:path>personalNumber</q:path>
+                    <expression>
+                        <path>$account/attributes/personalNumber</path>
+                    </expression>
+                </q:equal>
+            </correlation>
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            <reaction>
+                <situation>unlinked</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unmatched</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#addFocus</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>deleted</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
+
+    <capabilities xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+        <configured>
+            <cap:read>
+                <cap:enabled>true</cap:enabled>
+            </cap:read>
+        </configured>
+    </capabilities>
+
+</resource>

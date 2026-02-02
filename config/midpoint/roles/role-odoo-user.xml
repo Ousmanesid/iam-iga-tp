@@ -23,22 +23,12 @@
     
     <riskLevel>low</riskLevel>
     
-    <!-- Inducement: Compte Odoo (PostgreSQL) -->
+    <!-- Inducement: Compte Odoo via API JSON-RPC -->
     <inducement>
         <construction>
-            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d82" type="ResourceType"/>
+            <resourceRef oid="a1b2c3d4-e5f6-7890-abcd-ef1234567890" type="ResourceType"/>
             <kind>account</kind>
             <intent>default</intent>
-            
-            <!-- L'utilisateur sera actif dans Odoo -->
-            <attribute>
-                <ref>ri:active</ref>
-                <outbound>
-                    <expression>
-                        <value>true</value>
-                    </expression>
-                </outbound>
-            </attribute>
         </construction>
     </inducement>
     

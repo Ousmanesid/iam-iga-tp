@@ -1,0 +1,16 @@
+pyproject.toml
+README.md
+requirements.txt
+app/
+	__init__.py
+	main.py
+	routers/
+		__init__.py
+		health.py
+		sync.py
+	services/
+		__init__.py
+		midpoint_service.py
+		odoo_service.py
+		sync_service.py
+Dockerfile

@@ -207,6 +207,7 @@ services:
       - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
       - WEBHOOK_URL=http://n8n:5678/
       - GENERIC_TIMEZONE=Europe/Paris
     ports:
@@ -240,6 +241,10 @@ services:
       - N8N_URL=http://n8n:5678
       - N8N_USER=admin
       - N8N_PASSWORD=admin123
+      - ODOO_URL=http://odoo:8069
+      - ODOO_DB=odoo
+      - ODOO_USERNAME=admin
+      - ODOO_PASSWORD=admin
       - APP_PORT=8000
       - APP_ENV=development
     ports:
@@ -248,11 +253,90 @@ services:
       - net
     volumes:
       - ../gateway:/app
+      - ../data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # === Mattermost DB ===
+  mattermost-db:
+    image: postgres:13-alpine
+    container_name: mattermost-db
+    environment:
+      - POSTGRES_USER=mmuser
+      - POSTGRES_PASSWORD=mmuser_password
+      - POSTGRES_DB=mattermost
+    networks:
+      - net
+    volumes:
+      - mattermost_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Mattermost ===
+  mattermost:
+    image: mattermost/mattermost-team-edition:9.5
+    container_name: mattermost
+    depends_on:
+      mattermost-db:
+        condition: service_healthy
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://mmuser:mmuser_password@mattermost-db:5432/mattermost?sslmode=disable&connect_timeout=10
+      - MM_SERVICESETTINGS_SITEURL=http://localhost:8065
+    ports:
+      - "8065:8065"
+    networks:
+      - net
+    volumes:
+      - mattermost_data:/mattermost/data
+      - mattermost_config:/mattermost/config
+      - mattermost_plugins:/mattermost/plugins
+      - mattermost_client_plugins:/mattermost/client/plugins
+
+  # === Nextcloud DB ===
+  nextcloud-db:
+    image: postgres:13-alpine
+    container_name: nextcloud-db
+    environment:
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=nextcloud_password
+      - POSTGRES_DB=nextcloud
+    networks:
+      - net
+    volumes:
+      - nextcloud_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Nextcloud ===
+  nextcloud:
+    image: nextcloud:28
+    container_name: nextcloud
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=nextcloud-db
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD=nextcloud_password
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin
+    ports:
+      - "8081:80"
+    networks:
+      - net
+    volumes:
+      - nextcloud_data:/var/www/html
 
 networks:
   net:
@@ -268,3 +352,10 @@ volumes:
   odoo_addons:
   intranet_db_data:
   n8n_data:
+  mattermost_db_data:
+  mattermost_data:
+  mattermost_config:
+  mattermost_plugins:
+  mattermost_client_plugins:
+  nextcloud_db_data:
+  nextcloud_data:

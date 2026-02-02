@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Resource Definition: Odoo ERP (API XML-RPC)
+  Connexion à Odoo via l'API XML-RPC standard pour une gestion complète des utilisateurs.
+  Utilise le connecteur ScriptedREST avec des scripts Groovy qui appellent XML-RPC.
+  
+  Endpoints XML-RPC :
+  - /xmlrpc/2/common : Authentification
+  - /xmlrpc/2/object : Opérations CRUD (execute_kw)
+  
+  Compte technique: midpoint_service (à créer dans Odoo)
+  Groupes attribués: Internal User (base.group_user)
+  Mot de passe: Aucun (authentification LDAP) ou reset par email
+-->
+<resource oid="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo ERP (API)</name>
+    <description>Connexion à Odoo via API JSON-RPC pour gestion des utilisateurs</description>
+
+    <!-- Connecteur ScriptedREST -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:equal>
+                <q:path>connectorType</q:path>
+                <q:value>com.evolveum.polygon.connector.scripted.rest.ScriptedRESTConnector</q:value>
+            </q:equal>
+        </filter>
+    </connectorRef>
+
+    <connectorConfiguration
+            xmlns:icfcrest="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-scripted-rest/com.evolveum.polygon.connector.scripted.rest.ScriptedRESTConnector">
+        <icfc:configurationProperties>
+            <!-- URL de base Odoo -->
+            <icfcrest:serviceAddress>http://odoo:8069</icfcrest:serviceAddress>
+            
+            <!-- Compte technique MidPoint dans Odoo -->
+            <icfcrest:username>midpoint_service</icfcrest:username>
+            <icfcrest:password>
+                <t:clearValue>midpoint123</t:clearValue>
+            </icfcrest:password>
+            
+            <!-- Chemin des scripts Groovy -->
+            <icfcrest:scriptBaseClass>BaseScript</icfcrest:scriptBaseClass>
+            <icfcrest:scriptRoots>/opt/midpoint/var/scripts/odoo</icfcrest:scriptRoots>
+            
+            <!-- Scripts Groovy pour les opérations -->
+            <icfcrest:testScriptFileName>TestScript.groovy</icfcrest:testScriptFileName>
+            <icfcrest:schemaScriptFileName>SchemaScript.groovy</icfcrest:schemaScriptFileName>
+            <icfcrest:searchScriptFileName>SearchScript.groovy</icfcrest:searchScriptFileName>
+            <icfcrest:createScriptFileName>CreateScript.groovy</icfcrest:createScriptFileName>
+            <icfcrest:updateScriptFileName>UpdateScript.groovy</icfcrest:updateScriptFileName>
+            <icfcrest:deleteScriptFileName>DeleteScript.groovy</icfcrest:deleteScriptFileName>
+        </icfc:configurationProperties>
+    </connectorConfiguration>
+
+    <schemaHandling>
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Odoo User</displayName>
+            <default>true</default>
+            <objectClass>ri:AccountObjectClass</objectClass>
+
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Odoo User ID</displayName>
+            </attribute>
+
+            <attribute>
+                <ref>icfs:name</ref>
+                <displayName>Login</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/givenName</path>
+                    </source>
+                    <source>
+                        <path>$user/familyName</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>def first = givenName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); def last = familyName?.toString()?.toLowerCase()?.replaceAll('[^a-z0-9]', ''); return (first &amp;&amp; last) ? first + '.' + last : null</code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:name</ref>
+                <displayName>Full Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/fullName</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                </outbound>
+            </attribute>
+
+            <attribute>
+                <ref>ri:active</ref>
+                <displayName>Active</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <value>true</value>
+                    </expression>
+                </outbound>
+            </attribute>
+
+            <!-- Note: Le groupe Internal User est attribué automatiquement par le CreateScript.groovy -->
+
+            <activation>
+                <administrativeStatus>
+                    <outbound>
+                        <strength>strong</strength>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    return input?.enabled ? ActivationStatusType.ENABLED : ActivationStatusType.DISABLED
+                                </code>
+                            </script>
+                        </expression>
+                        <target>
+                            <path>$projection/activation/administrativeStatus</path>
+                        </target>
+                    </outbound>
+                    <inbound>
+                        <strength>weak</strength>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    return input ? ActivationStatusType.ENABLED : ActivationStatusType.DISABLED
+                                </code>
+                            </script>
+                        </expression>
+                    </inbound>
+                </administrativeStatus>
+            </activation>
+
+        </objectType>
+    </schemaHandling>
+
+    <synchronization>
+        <objectSynchronization>
+            <kind>account</kind>
+            <intent>default</intent>
+            <enabled>true</enabled>
+            
+            <correlation>
+                <q:equal>
+                    <q:path>name</q:path>
+                    <expression>
+                        <path>$projection/attributes/icfs:name</path>
+                    </expression>
+                </q:equal>
+            </correlation>
+            
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            
+            <reaction>
+                <situation>deleted</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+            
+            <reaction>
+                <situation>unlinked</situation>
+                <synchronize>true</synchronize>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            
+            <reaction>
+                <situation>unmatched</situation>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
+
+</resource>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Configuration système pour appliquer le User Template avec auto-assignation
+-->
+<systemConfiguration oid="00000000-0000-0000-0000-000000000001"
+        xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+        xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+        xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3">
+    
+    <name>SystemConfiguration</name>
+    
+    <!-- Appliquer le User Template à tous les utilisateurs -->
+    <defaultObjectPolicyConfiguration>
+        <type>UserType</type>
+        <objectTemplateRef oid="10000000-0000-0000-0000-000000000222"/>
+    </defaultObjectPolicyConfiguration>
+    
+</systemConfiguration>

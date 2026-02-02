@@ -87,16 +87,18 @@
                 </outbound>
             </attribute>
             
-            <!-- Association membre du groupe -->
-            <association>
+            <!-- Attribut membre du groupe - membre dummy requis pour groupOfNames -->
+            <attribute>
                 <ref>ri:member</ref>
-                <displayName>Group Member</displayName>
-                <kind>entitlement</kind>
-                <intent>group</intent>
-                <direction>subjectToObject</direction>
-                <associationAttribute>ri:member</associationAttribute>
-                <valueAttribute>ri:dn</valueAttribute>
-            </association>
+                <displayName>Group Members</displayName>
+                <fetchStrategy>explicit</fetchStrategy>
+                <outbound>
+                    <strength>weak</strength>
+                    <expression>
+                        <value>cn=dummy,ou=users,dc=example,dc=com</value>
+                    </expression>
+                </outbound>
+            </attribute>
             
         </objectType>
     </schemaHandling>

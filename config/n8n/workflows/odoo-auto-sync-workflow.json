@@ -1,0 +1,115 @@
+{
+  "name": "Odoo HR Employees → Gateway CSV (Auto Sync)",
+  "description": "Écoute les changements d'employés Odoo et met à jour le CSV via la Gateway",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "interval": [5]
+      },
+      "id": "trigger-cron",
+      "name": "Trigger: Every 5 minutes",
+      "type": "n8n-nodes-base.interval",
+      "typeVersion": 1,
+      "position": [250, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://odoo:8069/xmlrpc/2/common",
+        "authentication": "generic",
+        "genericAuth": {
+          "user": "admin",
+          "password": "admin"
+        },
+        "method": "POST",
+        "bodyParametersJson": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"common\",\n    \"method\": \"authenticate\",\n    \"args\": [\"odoo\", \"admin\", \"admin\", {}]\n  },\n  \"id\": 1\n}"
+      },
+      "id": "odoo-auth",
+      "name": "Odoo Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://odoo:8069/xmlrpc/2/object",
+        "method": "POST",
+        "bodyParametersJson": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\"odoo\", \"{{ $node[\\\"odoo-auth\\\"].json.result }}\", \"admin\", \"hr.employee\", \"search\", [[]]]\n  },\n  \"id\": 2\n}"
+      },
+      "id": "get-employees",
+      "name": "Get Employee IDs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://odoo:8069/xmlrpc/2/object",
+        "method": "POST",
+        "bodyParametersJson": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"call\",\n  \"params\": {\n    \"service\": \"object\",\n    \"method\": \"execute_kw\",\n    \"args\": [\"odoo\", \"{{ $node[\\\"odoo-auth\\\"].json.result }}\", \"admin\", \"hr.employee\", \"read\", [{{ JSON.stringify($json.body.result) }}], {\"fields\": [\"id\", \"name\", \"work_email\", \"job_title\", \"department_id\", \"active\"]}]\n  },\n  \"id\": 3\n}"
+      },
+      "id": "read-employees",
+      "name": "Read Employee Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 100]
+    },
+    {
+      "parameters": {
+        "loopOver": "body.result"
+      },
+      "id": "loop-employees",
+      "name": "Loop: Each Employee",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1050, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://gateway:8000/api/v1/odoo/webhook",
+        "authentication": "none",
+        "method": "POST",
+        "bodyParametersJson": "{\n  \"event\": \"update\",\n  \"employee_id\": \"{{ $json.id }}\",\n  \"data\": {\n    \"name\": \"{{ $json.name }}\",\n    \"work_email\": \"{{ $json.work_email }}\",\n    \"job_title\": \"{{ $json.job_title }}\",\n    \"active\": {{ $json.active }}\n  }\n}"
+      },
+      "id": "send-webhook",
+      "name": "Send Webhook to Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 100]
+    },
+    {
+      "parameters": {
+        "content": "✅ Synced: {{ $json.message }}"
+      },
+      "id": "log-success",
+      "name": "Log Response",
+      "type": "n8n-nodes-base.logStreamer",
+      "typeVersion": 1,
+      "position": [1450, 100]
+    }
+  ],
+  "connections": {
+    "trigger-cron": {
+      "main": [[{"node": "odoo-auth", "branch": 0}]]
+    },
+    "odoo-auth": {
+      "main": [[{"node": "get-employees", "branch": 0}]]
+    },
+    "get-employees": {
+      "main": [[{"node": "read-employees", "branch": 0}]]
+    },
+    "read-employees": {
+      "main": [[{"node": "loop-employees", "branch": 0}]]
+    },
+    "loop-employees": {
+      "main": [[{"node": "send-webhook", "branch": 0}]]
+    },
+    "send-webhook": {
+      "main": [[{"node": "log-success", "branch": 0}]]
+    }
+  },
+  "settings": {
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}

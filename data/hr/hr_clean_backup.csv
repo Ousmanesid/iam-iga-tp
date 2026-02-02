@@ -1,0 +1,49 @@
+personalNumber,givenName,familyName,email,department,title,status
+1001,Mitchell,Admin,admin@yourcompany.example.com,Management,Chief Executive Officer,Active
+1002,Jeffrey,Kelly,jeffrey.kelly72@example.com,Sales,Marketing and Community Manager,Active
+1003,Marc,Demo,mark.brown23@example.com,Research & Development,Experienced Developer,Active
+1004,Ronnie,Hart,ronnie.hart87@example.com,Research & Development,Team Leader,Active
+1005,Tina,Williamson,tina.williamson98@example.com,Administration,Human Resources Manager,Active
+1006,Abigail,Peterson,abigail.peterson39@example.com,Professional Services,Consultant,Active
+1007,Audrey,Peterson,audrey.peterson25@example.com,Professional Services,Consultant,Active
+1008,Eli,Lambert,eli.lambert22@example.com,Sales,Marketing and Community Manager,Active
+1009,Rachel,Perry,jod@odoo.com,Sales,Marketing and Community Manager,Active
+1010,Keith,Byrd,keith.byrd52@example.com,Research & Development,Experienced Developer,Active
+1011,Doris,Cole,doris.cole31@example.com,Professional Services,Consultant,Active
+1012,Ernest,Reed,ernest.reed47@example.com,Professional Services,Consultant,Active
+1013,Toni,Jimenez,toni.jimenez23@example.com,Professional Services,Consultant,Active
+1014,Anita,Oliver,anita.oliver32@example.com,R&D USA,Experienced Developer,Active
+1015,Sharlene,Rhodes,sharlene.rhodes49@example.com,Management,Experienced Developer,Active
+1016,Randall,Lewis,randall.lewis74@example.com,Research & Development,Experienced Developer,Active
+1017,Jennie,Fletcher,jennie.fletcher76@example.com,Research & Development,Experienced Developer,Active
+1018,Paul,Williams,paul.williams59@example.com,Long Term Projects,Experienced Developer,Active
+1019,Walter,Horton,walter.horton80@example.com,Research & Development,Experienced Developer,Active
+1020,Beth,Evans,beth.evans77@example.com,Research & Development,Experienced Developer,Active
+1021,Marie,Douchin,,Research & Development,Experienced Developer,Active
+1022,Fanny,Douchin,fannydouchin@gmail.com,Research & Development,Experienced Developer,Active
+1023,test,odoo gateway,si@gmail.com,Administration,Mana RH,Active
+1024,Test,Employee,test.employee@company.com,Unassigned,Developer,Active
+1025,Nouveau,Employe,nouveau.employe@company.com,IT,Développeur,Active
+1026,exempletest,dupont,exempletest.dupont@aegis.local,IT,commercial,Active
+1027,antonin,test,antotest@gmail.com,Administration,Experienced Developer,Active
+1028,Test,Odoo,test.odoo@company.com,IT,Développeur,Active
+1029,Marie,Curie,marie.curie@example.com,R&D USA,Développeur,Active
+1030,Jean,Dupont,jean.dupont@example.com,Ressources Humaines,RH,Active
+1031,Alice,Martin,alice.martin@company.com,IT,Développeur,Active
+1032,Bob,RH,bob.rh@company.com,Ressources Humaines,RH,Active
+1033,mbappe,test,mbappe@gmail.com,Long Term Projects,Consultant,Active
+1034,dembele,test,antoninjomir@gmail.com,IT,Trainee,Active
+1035,doue,test,,Unassigned,Employee,Active
+1036,yamal,test,,Unassigned,Employee,Active
+1037,marquinos,test barca,,IT,Consultant,Active
+1038,barcola,test,,Unassigned,Employee,Active
+1039,raphina,test,,Unassigned,Employee,Active
+1040,debrune,test,,Unassigned,Employee,Active
+1041,mayulu,mayulu,,Unassigned,Employee,Active
+1042,Gusto,Malori,,IT,Experienced Developer,Active
+1043,mario,sennys,mario@mail.fr,IT,Consultant,Active
+1044,dohhhhorntest,dohhhhorntest,,Unassigned,Employee,Active
+1045,test12336478,test12336478,,Unassigned,Employee,Active
+1046,Martin,Da Rocha,martindarocha@gmail.com,IT,Experienced Developer,Active
+1047,Fiona,Ho,,Long Term Projects,Employee,Active
+1048,Fiona,Ho,finona@gmail.com,IT,Experienced Developer,Active

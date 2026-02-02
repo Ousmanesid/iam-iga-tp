@@ -33,7 +33,7 @@
                 xmlns:icfccsvfile="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.evolveum.polygon.connector-csv/com.evolveum.polygon.connector.csv.CsvConnector">
             
             <!-- Chemin du fichier CSV -->
-            <icfccsvfile:filePath>/opt/midpoint-data/intranet/accounts.csv</icfccsvfile:filePath>
+            <icfccsvfile:filePath>/data/intranet/accounts.csv</icfccsvfile:filePath>
             
             <!-- Encodage -->
             <icfccsvfile:encoding>UTF-8</icfccsvfile:encoding>

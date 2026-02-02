@@ -23,7 +23,7 @@
 
     <connectorConfiguration>
         <icfc:configurationProperties>
-            <icfccsv:filePath>/opt/midpoint-data/hr/hr_clean.csv</icfccsv:filePath>
+            <icfccsv:filePath>/data/hr/hr_clean.csv</icfccsv:filePath>
             <icfccsv:encoding>UTF-8</icfccsv:encoding>
             <icfccsv:fieldDelimiter>,</icfccsv:fieldDelimiter>
             <icfccsv:uniqueAttribute>personalNumber</icfccsv:uniqueAttribute>
@@ -115,16 +115,18 @@
                     <expression>
                         <script>
                             <code>
-                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
-                                
-                                if (input == null) return ActivationStatusType.DISABLED
-                                
-                                String status = input.toString().toLowerCase()
-                                if (status.equals("active")) {
-                                    return ActivationStatusType.ENABLED
-                                } else {
-                                    return ActivationStatusType.DISABLED
-                                }
+import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType;
+
+if (input == null) {
+    return ActivationStatusType.DISABLED;
+}
+
+String status = input.toString().toLowerCase();
+if (status.equals("active")) {
+    return ActivationStatusType.ENABLED;
+} else {
+    return ActivationStatusType.DISABLED;
+}
                             </code>
                         </script>
                     </expression>
@@ -136,9 +138,7 @@
             
             <activation>
                 <administrativeStatus>
-                    <inbound>
-                        <strength>strong</strength>
-                    </inbound>
+                    <inbound/>
                 </administrativeStatus>
             </activation>
         </objectType>
@@ -150,6 +150,14 @@
             <kind>account</kind>
             <intent>default</intent>
             <enabled>true</enabled>
+            <correlation>
+                <q:equal>
+                    <q:path>personalNumber</q:path>
+                    <expression>
+                        <path>$account/attributes/personalNumber</path>
+                    </expression>
+                </q:equal>
+            </correlation>
             <reaction>
                 <situation>linked</situation>
                 <synchronize>true</synchronize>

@@ -8,9 +8,32 @@
     <displayName>LDAP Internet Group</displayName>
     <description>Groupe LDAP Internet géré par MidPoint</description>
 
+    <!-- Assignement au compte LDAP avec association au groupe Internet -->
     <inducement>
         <construction>
-            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d86"/>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d"/>
+            <kind>account</kind>
+            <intent>default</intent>
+            <association>
+                <ref>ri:group</ref>
+                <outbound>
+                    <expression>
+                        <associationFromLink>
+                            <projectionDiscriminator>
+                                <kind>entitlement</kind>
+                                <intent>group</intent>
+                            </projectionDiscriminator>
+                        </associationFromLink>
+                    </expression>
+                </outbound>
+            </association>
+        </construction>
+    </inducement>
+    
+    <!-- Inducement pour créer/lier au groupe Internet -->
+    <inducement>
+        <construction>
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7d"/>
             <kind>entitlement</kind>
             <intent>group</intent>
             <attribute>

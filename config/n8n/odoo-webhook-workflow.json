@@ -1,0 +1,83 @@
+{
+  "name": "Odoo → Gateway CSV Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "odoo-webhook",
+        "responseMode": "onReceived",
+        "authentication": "none"
+      },
+      "id": "123abc",
+      "name": "Webhook Receiver",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://gateway:8000/api/v1/odoo/webhook",
+        "authentication": "none",
+        "method": "POST",
+        "bodyParametersJson": "{\n  \"event\": \"{{ $json.event }}\",\n  \"employee_id\": \"{{ $json.employee_id }}\",\n  \"data\": {{ JSON.stringify($json.data) }}\n}"
+      },
+      "id": "gateway-sync",
+      "name": "Sync to Gateway CSV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "comparator": "equals",
+              "value1": "={{ $response.statusCode }}",
+              "value2": 200
+            }
+          ]
+        }
+      },
+      "id": "success-check",
+      "name": "Success Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "content": "✅ CSV Updated: {{ $json.message }}"
+      },
+      "id": "success-log",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.logStreamer",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "content": "❌ Update Failed: {{ $json.detail }}"
+      },
+      "id": "error-log",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.logStreamer",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Receiver": {
+      "main": [[{ "node": "Sync to Gateway CSV", "branch": 0 }]]
+    },
+    "Sync to Gateway CSV": {
+      "main": [[{ "node": "Success Check", "branch": 0 }]]
+    },
+    "Success Check": {
+      "main": [
+        [{ "node": "Log Success", "branch": 0 }],
+        [{ "node": "Log Error", "branch": 0 }]
+      ]
+    }
+  }
+}

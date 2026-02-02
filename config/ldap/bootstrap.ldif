@@ -128,6 +128,17 @@ cn: AppBiz_CustomGR2_Audit
 description: Auditeur application metier
 member: cn=placeholder,ou=users,dc=example,dc=com
 
+# Utilisateur factice requis par groupOfNames (au moins un member)
+# Utilisé par MidPoint lors de la création de nouveaux groupes LDAP
+dn: cn=dummy,ou=users,dc=example,dc=com
+objectClass: top
+objectClass: person
+objectClass: inetOrgPerson
+cn: dummy
+sn: Dummy
+uid: dummy
+description: Membre factice pour groupes vides (groupOfNames)
+
 # Compte technique pour MidPoint (bind DN)
 dn: cn=midpoint-admin,ou=users,dc=example,dc=com
 objectClass: top

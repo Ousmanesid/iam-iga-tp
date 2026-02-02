@@ -101,15 +101,25 @@
 
 ### Étape 3.3 : Vérifier les groupes LDAP dans OpenLDAP
 1. Ouvrir un terminal
-2. Se connecter à OpenLDAP :
+2. Lister tous les utilisateurs dans LDAP :
    ```bash
-   docker exec -it openldap ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin
+   docker exec -it openldap ldapsearch -x -H ldap://localhost -b "ou=users,dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "(objectClass=inetOrgPerson)" dn cn
    ```
 3. Rechercher Alice Doe :
    ```bash
-   docker exec -it openldap ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "cn=alice.doe"
+   docker exec -it openldap ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "(uid=alice.doe)"
    ```
-4. **ZOOM** : Montrer les attributs `memberOf` :
+4. **ZOOM** : Montrer les détails du compte :
+   - ✅ `dn: uid=alice.doe,ou=users,dc=example,dc=com`
+   - ✅ `cn: Alice Doe`
+   - ✅ `uid: alice.doe`
+   - ✅ `mail: alice.doe@example.com`
+
+5. Vérifier l'appartenance aux groupes :
+   ```bash
+   docker exec -it openldap ldapsearch -x -H ldap://localhost -b "ou=groups,dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "(member=uid=alice.doe,ou=users,dc=example,dc=com)" dn
+   ```
+6. **ZOOM** : Montrer les groupes où Alice est membre :
    - ✅ `cn=Employee,ou=groups,dc=example,dc=com`
    - ✅ `cn=Internet,ou=groups,dc=example,dc=com`
    - ✅ `cn=Printer,ou=groups,dc=example,dc=com`
@@ -198,8 +208,11 @@ python3 scripts/export_odoo_hr.py
 # Vérifier le CSV
 grep "Alice" data/hr/hr_clean.csv
 
-# Vérifier LDAP
-docker exec -it openldap ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "cn=alice.doe"
+# Vérifier LDAP - Rechercher Alice Doe
+docker exec -it openldap ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "(uid=alice.doe)"
+
+# Vérifier les groupes d'Alice
+docker exec -it openldap ldapsearch -x -H ldap://localhost -b "ou=groups,dc=example,dc=com" -D "cn=admin,dc=example,dc=com" -w admin "(member=uid=alice.doe,ou=users,dc=example,dc=com)" dn
 ```
 
 ---

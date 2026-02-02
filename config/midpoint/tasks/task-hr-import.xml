@@ -1,3 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tâche d'import HR CSV → MidPoint
+  Import périodique des employés depuis le fichier CSV RH (hr_raw.csv)
+  Déclenche l'auto-assignment des rôles via l'object template
+  
+  Exécution : toutes les 60 secondes (mode réconciliation)
+-->
 <task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
       xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
       xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
@@ -5,25 +13,29 @@
       xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3"
       xmlns:org="http://midpoint.evolveum.com/xml/ns/public/common/org-3"
       oid="10000000-0000-0000-5555-000000000001">
+    
     <name>HR CSV Import Task</name>
-    <description>
-        Import périodique des comptes depuis le CSV RH.
-    </description>
+    <description>Import périodique des employés depuis le CSV RH (hr_raw.csv). Crée les utilisateurs et déclenche l'auto-assignment des rôles selon le département.</description>
+    
     <ownerRef oid="00000000-0000-0000-0000-000000000002" relation="org:default" type="c:UserType"/>
+    
     <executionState>runnable</executionState>
+    
     <schedule>
         <recurrence>recurring</recurrence>
         <interval>60</interval>
     </schedule>
+    
     <activity>
         <work>
-            <import>
+            <reconciliation>
                 <resourceObjects>
                     <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7c" type="c:ResourceType"/>
                     <kind>account</kind>
                     <intent>default</intent>
+                    <objectclass>ri:AccountObjectClass</objectclass>
                 </resourceObjects>
-            </import>
+            </reconciliation>
         </work>
     </activity>
 </task>

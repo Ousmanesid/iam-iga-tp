@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<user xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      oid="b0b12345-6789-0abc-def0-123456789012">
+    
+    <name>Bob Martin</name>
+    <fullName>Bob Martin</fullName>
+    <givenName>Bob</givenName>
+    <familyName>Martin</familyName>
+    <emailAddress>bob.martin@example.com</emailAddress>
+    
+    <activation>
+        <administrativeStatus>enabled</administrativeStatus>
+    </activation>
+    
+</user>

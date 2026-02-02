@@ -1,0 +1,70 @@
+{
+  "name": "Odoo HR Employees → Gateway CSV (Auto-Sync)",
+  "description": "Récupère les employés Odoo toutes les 5 minutes et met à jour le CSV via webhook",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "interval": [5]
+      },
+      "id": "timer",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.interval",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "notes": "Déclenche la sync toutes les 5 minutes"
+    },
+    {
+      "parameters": {
+        "host": "http://odoo:8069",
+        "database": "odoo",
+        "username": "admin",
+        "password": "admin",
+        "resource": "hr.employee",
+        "operation": "getAll",
+        "limit": 1000
+      },
+      "id": "odoo-get-all",
+      "name": "Get All Employees from Odoo",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "notes": "Récupère tous les employés actifs d'Odoo"
+    },
+    {
+      "parameters": {
+        "loopOver": "=json"
+      },
+      "id": "loop",
+      "name": "Loop through each employee",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://gateway:8000/api/v1/odoo/webhook",
+        "authentication": "none",
+        "method": "POST",
+        "contentType": "application/json",
+        "body": "={\n  \"event\": \"update\",\n  \"employee_id\": {{ $json.id }},\n  \"data\": {\n    \"name\": \"{{ $json.name }}\",\n    \"work_email\": \"{{ $json.work_email || '' }}\",\n    \"job_title\": \"{{ $json.job_title || '' }}\",\n    \"active\": {{ $json.active }}\n  }\n}"
+      },
+      "id": "webhook",
+      "name": "Send to Gateway Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "timer": {
+      "main": [[{"node": "odoo-get-all", "branch": 0}]]
+    },
+    "odoo-get-all": {
+      "main": [[{"node": "loop", "branch": 0}]]
+    },
+    "loop": {
+      "main": [[{"node": "webhook", "branch": 0}]]
+    }
+  }
+}

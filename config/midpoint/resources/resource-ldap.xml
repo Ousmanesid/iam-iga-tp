@@ -212,6 +212,19 @@
                     </source>
                 </outbound>
             </attribute>
+
+            <!-- groupOfNames exige au moins un member : membre factice pour création du groupe -->
+            <attribute>
+                <ref>ri:member</ref>
+                <displayName>Group Members</displayName>
+                <fetchStrategy>explicit</fetchStrategy>
+                <outbound>
+                    <strength>weak</strength>
+                    <expression>
+                        <value>cn=dummy,ou=users,dc=example,dc=com</value>
+                    </expression>
+                </outbound>
+            </attribute>
             
         </objectType>
     </schemaHandling>

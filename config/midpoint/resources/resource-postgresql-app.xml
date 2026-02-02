@@ -126,19 +126,6 @@
                 </outbound>
             </attribute>
 
-            <!-- Permission level (app_read, app_write, app_admin_db) -->
-            <!-- Géré via les rôles MidPoint qui définissent la valeur -->
-            <attribute>
-                <ref>ri:permission_level</ref>
-                <displayName>Permission Level</displayName>
-                <outbound>
-                    <strength>weak</strength>
-                    <expression>
-                        <value>app_read</value>
-                    </expression>
-                </outbound>
-            </attribute>
-
             <!-- Enabled status -->
             <attribute>
                 <ref>ri:enabled</ref>

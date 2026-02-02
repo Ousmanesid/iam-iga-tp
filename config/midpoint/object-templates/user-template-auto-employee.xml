@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Object Template: User Template avec auto-assignation du rôle Employee
+  
+  Ce template est appliqué à tous les utilisateurs et assigne automatiquement
+  le rôle Employee à tout utilisateur.
+-->
+<objectTemplate oid="10000000-0000-0000-0000-000000000222"
+        xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+        xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+        xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3">
+    
+    <name>User Template - Auto Employee Role</name>
+    <description>
+        Template utilisateur qui assigne automatiquement le rôle Employee
+        à tous les utilisateurs.
+    </description>
+    
+    <!-- ============================================================ -->
+    <!-- MAPPING: Auto-assignation du rôle Employee -->
+    <!-- ============================================================ -->
+    <mapping>
+        <name>Auto-assign Employee role</name>
+        <description>Assigne automatiquement le rôle Employee à tous les utilisateurs</description>
+        <strength>strong</strength>
+        <expression>
+            <assignmentTargetSearch>
+                <targetType>RoleType</targetType>
+                <oid>00000000-0000-0000-0000-000000000104</oid>
+            </assignmentTargetSearch>
+        </expression>
+        <target>
+            <path>assignment</path>
+        </target>
+    </mapping>
+    
+</objectTemplate>

@@ -1,2 +1,3 @@
-# Gateway IAM - Application Package
-
+"""
+Aegis Gateway - Package principal
+"""

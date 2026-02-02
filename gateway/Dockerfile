@@ -1,36 +1,25 @@
-# Gateway IAM - Dockerfile
-# Interface Python FastAPI entre MidPoint, N8N, PostgreSQL et Supabase
-
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Installer les dépendances système
-RUN apt-get update && apt-get install -y \
+# Dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libpq-dev \
-    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copier les requirements et installer les dépendances Python
+# Dépendances Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier le code de l'application
-COPY . .
+# Code application
+COPY app/ ./app/
 
-# Créer un utilisateur non-root
-RUN useradd -m -u 1000 gateway
-USER gateway
-
-# Exposer le port
+# Port
 EXPOSE 8000
 
-# Variables d'environnement par défaut
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV APP_PORT=8000
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/live || exit 1
 
-# Commande de démarrage
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
+# Démarrage
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
