@@ -32,3 +32,5 @@ docker/volumes/
 *.key
 *.pem
 secrets/
+connectors/idm-connector-odoo/
+connectors/build/*.jar

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Rôle Employee v2 - Utilise le connecteur Odoo natif (XML-RPC)
+    
+    Ce rôle attribue automatiquement:
+    1. Compte LDAP avec groupes (Employee, Internet, Printer, SharePoint)
+    2. Compte Odoo via le connecteur natif XML-RPC
+-->
+<role oid="00000000-0000-0000-0000-000000000100"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Employee_v2</name>
+    <description>Rôle Employee modernisé utilisant le connecteur Odoo natif (XML-RPC) au lieu de l'accès direct PostgreSQL</description>
+    
+    <displayName>Employee (v2 - Native Odoo)</displayName>
+    
+    <requestable>true</requestable>
+    <riskLevel>low</riskLevel>
+    
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- INDUCEMENT 1: Compte LDAP de base -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <inducement>
+        <description>Création du compte LDAP de base</description>
+        <construction>
+            <!-- Ressource LDAP -->
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d7f" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+    
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- INDUCEMENT 2-5: Groupes LDAP via sous-rôles -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <inducement>
+        <description>Attribution du groupe LDAP Employee</description>
+        <targetRef oid="00000000-0000-0000-0000-000000000021" type="RoleType"/>
+    </inducement>
+    
+    <inducement>
+        <description>Attribution du groupe LDAP Internet</description>
+        <targetRef oid="00000000-0000-0000-0000-000000000022" type="RoleType"/>
+    </inducement>
+    
+    <inducement>
+        <description>Attribution du groupe LDAP Printer</description>
+        <targetRef oid="00000000-0000-0000-0000-000000000023" type="RoleType"/>
+    </inducement>
+    
+    <inducement>
+        <description>Attribution du groupe LDAP SharePoint</description>
+        <targetRef oid="00000000-0000-0000-0000-000000000024" type="RoleType"/>
+    </inducement>
+    
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- INDUCEMENT 6: Compte Odoo via Connecteur Natif RPC -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <inducement>
+        <description>Création du compte Odoo via le connecteur XML-RPC natif (remplace l'accès direct PostgreSQL)</description>
+        <construction>
+            <!-- Ressource Odoo Native RPC (nouveau connecteur) -->
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d99" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+    
+    <!-- Métadonnées -->
+    <metadata>
+        <createTimestamp>2026-02-02T14:30:00.000Z</createTimestamp>
+    </metadata>
+</role>

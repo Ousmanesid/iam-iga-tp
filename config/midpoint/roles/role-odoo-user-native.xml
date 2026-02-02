@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Rôle pour l'attribution d'un compte Odoo via le connecteur natif RPC
+    Ce rôle crée un compte utilisateur dans Odoo avec les droits "Internal User"
+-->
+<role oid="00000000-0000-0000-0000-000000000031"
+      xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo_User_Native</name>
+    <description>Rôle pour créer un compte utilisateur Odoo via le connecteur XML-RPC natif. Attribue les droits "Internal User" de base.</description>
+    
+    <displayName>Compte Odoo (Native RPC)</displayName>
+    
+    <requestable>true</requestable>
+    <riskLevel>low</riskLevel>
+    
+    <inducement>
+        <description>Création automatique d'un compte Odoo via XML-RPC</description>
+        <construction>
+            <!-- Référence vers la ressource Odoo Native RPC -->
+            <resourceRef oid="8a83b1a4-be18-11e6-ae84-7301fdab1d99" type="ResourceType"/>
+            <kind>account</kind>
+            <intent>default</intent>
+        </construction>
+    </inducement>
+    
+    <!-- Métadonnées -->
+    <metadata>
+        <createTimestamp>2026-02-02T14:30:00.000Z</createTimestamp>
+    </metadata>
+</role>

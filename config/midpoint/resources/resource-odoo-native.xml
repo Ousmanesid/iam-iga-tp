@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Ressource Odoo utilisant le connecteur natif XML-RPC
+    https://gitlab.com/lns-public/idm-connector-odoo
+    
+    Avantages par rapport au connecteur DatabaseTable:
+    - Utilise l'API XML-RPC officielle d'Odoo
+    - Respecte la logique métier Odoo
+    - Support natif des groupes et permissions
+    - Pas besoin de vues SQL personnalisées
+-->
+<resource oid="8a83b1a4-be18-11e6-ae84-7301fdab1d99"
+          xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+          xmlns:t="http://prism.evolveum.com/xml/ns/public/types-3"
+          xmlns:q="http://prism.evolveum.com/xml/ns/public/query-3"
+          xmlns:icfs="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/resource-schema-3"
+          xmlns:icfc="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/connector-schema-3"
+          xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+
+    <name>Odoo ERP (Native RPC)</name>
+    <description>Connexion native à Odoo via XML-RPC API - Provisioning des utilisateurs et gestion des groupes</description>
+
+    <!-- Référence au connecteur Odoo natif -->
+    <connectorRef type="ConnectorType">
+        <filter>
+            <q:and>
+                <q:equal>
+                    <q:path>connectorType</q:path>
+                    <q:value>lu.lns.connector.odoo.OdooConnector</q:value>
+                </q:equal>
+            </q:and>
+        </filter>
+    </connectorRef>
+
+    <!-- Configuration de connexion -->
+    <connectorConfiguration 
+        xmlns:odoo="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/lu.lns.connector.odoo/lu.lns.connector.odoo.OdooConnector">
+        
+        <icfc:configurationProperties>
+            <!-- URL du serveur Odoo -->
+            <odoo:url>http://odoo:8069</odoo:url>
+            
+            <!-- Base de données Odoo -->
+            <odoo:database>odoo</odoo:database>
+            
+            <!-- Identifiants -->
+            <odoo:username>admin</odoo:username>
+            <odoo:password>
+                <t:clearValue>admin</t:clearValue>
+            </odoo:password>
+            
+            <!-- Modèles à exposer dans le schéma -->
+            <odoo:retrieveModels>res.users, res.partner, res.groups, hr.employee, hr.department, hr.job</odoo:retrieveModels>
+            
+            <!-- Expansion des relations pour récupérer les données liées -->
+            <odoo:expandRelations>res.users--partner_id, hr.employee--user_id, hr.employee--department_id, hr.employee--job_id</odoo:expandRelations>
+            
+            <!-- Profondeur maximum d'expansion -->
+            <odoo:maxExpansionDepth>2</odoo:maxExpansionDepth>
+        </icfc:configurationProperties>
+        
+        <!-- Désactiver les handlers qui peuvent interférer -->
+        <icfc:resultsHandlerConfiguration>
+            <icfc:enableNormalizingResultsHandler>false</icfc:enableNormalizingResultsHandler>
+            <icfc:enableFilteredResultsHandler>false</icfc:enableFilteredResultsHandler>
+            <icfc:enableAttributesToGetSearchResultsHandler>false</icfc:enableAttributesToGetSearchResultsHandler>
+        </icfc:resultsHandlerConfiguration>
+    </connectorConfiguration>
+
+    <!-- Gestion du schéma pour les utilisateurs Odoo (res.users) -->
+    <schemaHandling>
+        
+        <!-- Object Type: Utilisateurs Odoo -->
+        <objectType>
+            <kind>account</kind>
+            <intent>default</intent>
+            <displayName>Odoo User Account</displayName>
+            <default>true</default>
+            <objectClass>ri:res.users</objectClass>
+            
+            <!-- Identifiant unique (ID Odoo) -->
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Odoo ID</displayName>
+                <limitations>
+                    <access>
+                        <read>true</read>
+                        <add>false</add>
+                        <modify>false</modify>
+                    </access>
+                </limitations>
+            </attribute>
+            
+            <!-- Login (identifiant de connexion) -->
+            <attribute>
+                <ref>icfs:name</ref>
+                <displayName>Login</displayName>
+                <limitations>
+                    <minOccurs>1</minOccurs>
+                </limitations>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/name</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                // Générer le login à partir du nom (prénom.nom)
+                                if (name == null) return null
+                                def normalized = name.toString()
+                                    .toLowerCase()
+                                    .replaceAll('[éèêë]', 'e')
+                                    .replaceAll('[àâä]', 'a')
+                                    .replaceAll('[ùûü]', 'u')
+                                    .replaceAll('[îï]', 'i')
+                                    .replaceAll('[ôö]', 'o')
+                                    .replaceAll('[ç]', 'c')
+                                    .replaceAll('[^a-z0-9\\s]', '')
+                                    .trim()
+                                def parts = normalized.split('\\s+')
+                                if (parts.length >= 2) {
+                                    return parts[0] + '.' + parts[-1]
+                                }
+                                return normalized.replaceAll('\\s+', '.')
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+                <inbound>
+                    <target>
+                        <path>$user/name</path>
+                    </target>
+                    <condition>
+                        <script>
+                            <code>basic.isEmpty(focus?.name)</code>
+                        </script>
+                    </condition>
+                </inbound>
+            </attribute>
+            
+            <!-- Nom complet (via partner_id--name) -->
+            <attribute>
+                <ref>ri:partner_id--name</ref>
+                <displayName>Full Name</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/fullName</path>
+                    </source>
+                </outbound>
+                <inbound>
+                    <target>
+                        <path>$user/fullName</path>
+                    </target>
+                </inbound>
+            </attribute>
+            
+            <!-- Email (via partner_id--email) -->
+            <attribute>
+                <ref>ri:partner_id--email</ref>
+                <displayName>Email</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <source>
+                        <path>$user/emailAddress</path>
+                    </source>
+                    <expression>
+                        <script>
+                            <code>
+                                if (emailAddress != null) return emailAddress
+                                // Générer email par défaut si non fourni
+                                def login = basic.getAttributeValue(projection, 'login')
+                                if (login != null) {
+                                    return login + '@example.com'
+                                }
+                                return null
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+                <inbound>
+                    <target>
+                        <path>$user/emailAddress</path>
+                    </target>
+                </inbound>
+            </attribute>
+            
+            <!-- Statut actif -->
+            <attribute>
+                <ref>ri:active</ref>
+                <displayName>Active</displayName>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <script>
+                            <code>
+                                import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                
+                                def status = focus?.activation?.administrativeStatus
+                                return status == null || status == ActivationStatusType.ENABLED
+                            </code>
+                        </script>
+                    </expression>
+                </outbound>
+            </attribute>
+            
+            <!-- Groupes Odoo (permissions) -->
+            <attribute>
+                <ref>ri:groups_id</ref>
+                <displayName>Odoo Groups</displayName>
+                <tolerant>true</tolerant>
+                <outbound>
+                    <strength>strong</strength>
+                    <expression>
+                        <!-- Groupe de base: Internal User (ID généralement = 1) -->
+                        <value>1</value>
+                    </expression>
+                </outbound>
+            </attribute>
+            
+            <!-- Gestion de l'activation -->
+            <activation>
+                <administrativeStatus>
+                    <outbound>
+                        <strength>strong</strength>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    return input == ActivationStatusType.ENABLED
+                                </code>
+                            </script>
+                        </expression>
+                    </outbound>
+                    <inbound>
+                        <expression>
+                            <script>
+                                <code>
+                                    import com.evolveum.midpoint.xml.ns._public.common.common_3.ActivationStatusType
+                                    return input == true ? ActivationStatusType.ENABLED : ActivationStatusType.DISABLED
+                                </code>
+                            </script>
+                        </expression>
+                    </inbound>
+                </administrativeStatus>
+            </activation>
+            
+            <!-- Credentials (mot de passe) -->
+            <credentials>
+                <password>
+                    <outbound>
+                        <strength>strong</strength>
+                    </outbound>
+                </password>
+            </credentials>
+        </objectType>
+        
+        <!-- Object Type: Groupes Odoo (entitlements) -->
+        <objectType>
+            <kind>entitlement</kind>
+            <intent>odooGroup</intent>
+            <displayName>Odoo Group</displayName>
+            <default>true</default>
+            <objectClass>ri:res.groups</objectClass>
+            
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Group ID</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>icfs:name</ref>
+                <displayName>Group Name</displayName>
+                <inbound>
+                    <target>
+                        <path>name</path>
+                    </target>
+                </inbound>
+            </attribute>
+            
+            <attribute>
+                <ref>ri:full_name</ref>
+                <displayName>Full Name</displayName>
+            </attribute>
+        </objectType>
+        
+        <!-- Object Type: Employés Odoo (pour lecture) -->
+        <objectType>
+            <kind>generic</kind>
+            <intent>employee</intent>
+            <displayName>Odoo Employee</displayName>
+            <default>false</default>
+            <objectClass>ri:hr.employee</objectClass>
+            
+            <attribute>
+                <ref>icfs:uid</ref>
+                <displayName>Employee ID</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>icfs:name</ref>
+                <displayName>Employee Name</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>ri:work_email</ref>
+                <displayName>Work Email</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>ri:department_id--name</ref>
+                <displayName>Department</displayName>
+            </attribute>
+            
+            <attribute>
+                <ref>ri:job_id--name</ref>
+                <displayName>Job Title</displayName>
+            </attribute>
+        </objectType>
+    </schemaHandling>
+
+    <!-- Synchronisation -->
+    <synchronization>
+        <objectSynchronization>
+            <name>User Sync</name>
+            <enabled>true</enabled>
+            <objectClass>ri:res.users</objectClass>
+            <kind>account</kind>
+            <intent>default</intent>
+            <focusType>UserType</focusType>
+            
+            <!-- Corrélation par email -->
+            <correlation>
+                <q:equal>
+                    <q:path>emailAddress</q:path>
+                    <expression>
+                        <path>$projection/attributes/ri:partner_id--email</path>
+                    </expression>
+                </q:equal>
+            </correlation>
+            
+            <!-- Réactions aux situations de synchronisation -->
+            <reaction>
+                <situation>linked</situation>
+                <synchronize>true</synchronize>
+            </reaction>
+            <reaction>
+                <situation>deleted</situation>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#unlink</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unlinked</situation>
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#link</handlerUri>
+                </action>
+            </reaction>
+            <reaction>
+                <situation>unmatched</situation>
+                <!-- Ne pas créer automatiquement d'utilisateur depuis Odoo -->
+                <action>
+                    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/action-3#inactivateShadow</handlerUri>
+                </action>
+            </reaction>
+        </objectSynchronization>
+    </synchronization>
+
+    <!-- Capacités -->
+    <capabilities>
+        <configured xmlns:cap="http://midpoint.evolveum.com/xml/ns/public/resource/capabilities-3">
+            <cap:activation>
+                <cap:status>
+                    <cap:attribute>ri:active</cap:attribute>
+                    <cap:enableValue>true</cap:enableValue>
+                    <cap:disableValue>false</cap:disableValue>
+                </cap:status>
+            </cap:activation>
+        </configured>
+    </capabilities>
+</resource>
